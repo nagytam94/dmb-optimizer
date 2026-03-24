@@ -841,6 +841,22 @@ function renderRVScoreboard(rows) {
 }
 
 // ===== PANEL 2: PROFIT WATERFALL =====
+// Pénzügyek section: data may be in column D (index 3) not C (index 2)
+function penVal(rows, rowIdx) {
+  if(rowIdx < 0 || rowIdx >= rows.length) return 0;
+  // Try JTR column first (index 3 = col D), then index 2 (col C)
+  for(let ci = 1; ci <= 6; ci++) {
+    const v = rows[rowIdx][ci];
+    if(v !== '' && v !== undefined && v !== null && v !== 0) {
+      if(typeof v === 'number') return v;
+      const s = String(v).replace(/\s/g,'').replace(',','.');
+      const f = parseFloat(s);
+      if(!isNaN(f) && f !== 0) return f;
+    }
+  }
+  return 0;
+}
+
 function renderProfitWaterfall(rows) {
   const penStart = findRowContains(rows, 'Pénzügyek');
   const eredmKim = findRowContains(rows, 'Eredménykimutatás', penStart > -1 ? penStart : 0);
@@ -855,7 +871,10 @@ function renderProfitWaterfall(rows) {
   const rAdminKtg = getFieldInBlock(rows, base, 'Adminisztratív', 60);
   const rKepzKtg = getFieldInBlock(rows, base, 'Képzési költség', 60);
   const rAmort = getFieldInBlock(rows, base, 'Tárgyi eszközök értékcsökkenése', 60);
-  const rCeltart = getFieldInBlock(rows, base, 'Kockázati céltartalék', 60);
+  // Céltartalék: "Kockázati céltartalék" appears twice (section header + value)
+  // Find the SECOND one which has the net value
+  const rCeltart1 = getFieldInBlock(rows, base, 'Kockázati céltartalék', 60);
+  const rCeltart = rCeltart1 > -1 ? getFieldInBlock(rows, rCeltart1 + 1, 'Kockázati céltartalék', 10) : -1;
   const rMarketing = getFieldInBlock(rows, base, 'Promóció és reklám', 60);
   const rAdo = getFieldInBlock(rows, base, 'Nyereségadó', 60);
   const rAdozasUtani = getFieldInBlock(rows, base, 'Adózás utáni eredmény', 60);
@@ -863,21 +882,21 @@ function renderProfitWaterfall(rows) {
   const rEgyebOssz = getFieldInBlock(rows, base, 'Egyéb tételek összesen', 60);
   const rProjekt = getFieldInBlock(rows, base, 'Projektek költsége', 60);
 
-  const kamatBev = rKamatBev > -1 ? jtrVal(rows, rKamatBev) : 0;
-  const kamatRaf = rKamatRaf > -1 ? Math.abs(jtrVal(rows, rKamatRaf)) : 0;
-  const dijBev = rDijBev > -1 ? jtrVal(rows, rDijBev) : 0;
-  const dijRaf = rDijRaf > -1 ? Math.abs(jtrVal(rows, rDijRaf)) : 0;
-  const szemKtg = rSzemKtg > -1 ? Math.abs(jtrVal(rows, rSzemKtg)) : 0;
-  const adminKtg = rAdminKtg > -1 ? Math.abs(jtrVal(rows, rAdminKtg)) : 0;
-  const kepzKtg = rKepzKtg > -1 ? Math.abs(jtrVal(rows, rKepzKtg)) : 0;
-  const marketing = rMarketing > -1 ? Math.abs(jtrVal(rows, rMarketing)) : 0;
-  const amort = rAmort > -1 ? Math.abs(jtrVal(rows, rAmort)) : 0;
-  const celtart = rCeltart > -1 ? Math.abs(jtrVal(rows, rCeltart)) : 0;
-  const ado = rAdo > -1 ? Math.abs(jtrVal(rows, rAdo)) : 0;
-  const adozasUtani = rAdozasUtani > -1 ? jtrVal(rows, rAdozasUtani) : 0;
-  const piackut = rPiackut > -1 ? Math.abs(jtrVal(rows, rPiackut)) : 0;
-  const egyeb = rEgyebOssz > -1 ? jtrVal(rows, rEgyebOssz) : 0;
-  const projekt = rProjekt > -1 ? Math.abs(jtrVal(rows, rProjekt)) : 0;
+  const kamatBev = rKamatBev > -1 ? penVal(rows, rKamatBev) : 0;
+  const kamatRaf = rKamatRaf > -1 ? Math.abs(penVal(rows, rKamatRaf)) : 0;
+  const dijBev = rDijBev > -1 ? penVal(rows, rDijBev) : 0;
+  const dijRaf = rDijRaf > -1 ? Math.abs(penVal(rows, rDijRaf)) : 0;
+  const szemKtg = rSzemKtg > -1 ? Math.abs(penVal(rows, rSzemKtg)) : 0;
+  const adminKtg = rAdminKtg > -1 ? Math.abs(penVal(rows, rAdminKtg)) : 0;
+  const kepzKtg = rKepzKtg > -1 ? Math.abs(penVal(rows, rKepzKtg)) : 0;
+  const marketing = rMarketing > -1 ? Math.abs(penVal(rows, rMarketing)) : 0;
+  const amort = rAmort > -1 ? Math.abs(penVal(rows, rAmort)) : 0;
+  const celtart = rCeltart > -1 ? Math.abs(penVal(rows, rCeltart)) : 0;
+  const ado = rAdo > -1 ? Math.abs(penVal(rows, rAdo)) : 0;
+  const adozasUtani = rAdozasUtani > -1 ? penVal(rows, rAdozasUtani) : 0;
+  const piackut = rPiackut > -1 ? Math.abs(penVal(rows, rPiackut)) : 0;
+  const egyeb = rEgyebOssz > -1 ? penVal(rows, rEgyebOssz) : 0;
+  const projekt = rProjekt > -1 ? Math.abs(penVal(rows, rProjekt)) : 0;
   const hr = szemKtg + adminKtg + kepzKtg;
 
   const waterLabels = ['Kamatbevétel', '-Kamatkiadás', '+Díjak', '-HR ktg', '-Marketing', '-Értékcsökk.', '-Piackutatás', '+Egyéb', '-Céltartalék', '-Adó', 'PROFIT'];
