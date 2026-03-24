@@ -1016,6 +1016,24 @@ function renderHitelPortfolio(rows) {
 
     chartLabels.push(d.name.replace('hitel','').replace('kölcsön','').trim());
   });
+
+  // ÖSSZESEN sor
+  html += '<tr style="border-top:2px solid #e94560; font-weight:700;">';
+  html += '<td style="color:#e94560;">ÖSSZESEN</td>';
+  let totalBehajtJtr = 0, totalAllJtr = 0;
+  TEAMS.forEach((t,i) => {
+    let sum = 0;
+    data.forEach(d => { if(d) sum += d.allomany[i]; });
+    if(i === JTR) totalAllJtr = sum;
+    const cls = i===JTR ? 'jtr-col' : '';
+    const style = i===JTR ? 'style="border-left:2px solid #f5a623; border-right:2px solid #f5a623; color:#f5a623;"' : '';
+    html += `<td class="${cls}" ${style}>${fmtN(sum)}</td>`;
+  });
+  data.forEach(d => { if(d) totalBehajtJtr += d.behajthat[JTR]; });
+  const totalBehPct = totalAllJtr > 0 ? (totalBehajtJtr / totalAllJtr * 100) : 0;
+  html += `<td>${totalBehPct.toFixed(1)}%</td>`;
+  html += '</tr>';
+
   html += '</table>';
 
   // Alerts for high behajthatatlan
