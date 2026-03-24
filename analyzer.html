@@ -859,6 +859,9 @@ function renderProfitWaterfall(rows) {
   const rMarketing = getFieldInBlock(rows, base, 'Promóció és reklám', 60);
   const rAdo = getFieldInBlock(rows, base, 'Nyereségadó', 60);
   const rAdozasUtani = getFieldInBlock(rows, base, 'Adózás utáni eredmény', 60);
+  const rPiackut = getFieldInBlock(rows, base, 'Piackutatás', 60);
+  const rEgyebOssz = getFieldInBlock(rows, base, 'Egyéb tételek összesen', 60);
+  const rProjekt = getFieldInBlock(rows, base, 'Projektek költsége', 60);
 
   const kamatBev = rKamatBev > -1 ? jtrVal(rows, rKamatBev) : 0;
   const kamatRaf = rKamatRaf > -1 ? Math.abs(jtrVal(rows, rKamatRaf)) : 0;
@@ -872,10 +875,13 @@ function renderProfitWaterfall(rows) {
   const celtart = rCeltart > -1 ? Math.abs(jtrVal(rows, rCeltart)) : 0;
   const ado = rAdo > -1 ? Math.abs(jtrVal(rows, rAdo)) : 0;
   const adozasUtani = rAdozasUtani > -1 ? jtrVal(rows, rAdozasUtani) : 0;
+  const piackut = rPiackut > -1 ? Math.abs(jtrVal(rows, rPiackut)) : 0;
+  const egyeb = rEgyebOssz > -1 ? jtrVal(rows, rEgyebOssz) : 0;
+  const projekt = rProjekt > -1 ? Math.abs(jtrVal(rows, rProjekt)) : 0;
   const hr = szemKtg + adminKtg + kepzKtg;
 
-  const waterLabels = ['Kamatbevétel', '-Kamatkiadás', '+Díjak', '-HR ktg', '-Marketing', '-Értékcsökk.', '-Céltartalék', '-Adó', 'PROFIT'];
-  const jtrVals = [kamatBev, -kamatRaf, dijBev - dijRaf, -hr, -marketing, -amort, -celtart, -ado, adozasUtani];
+  const waterLabels = ['Kamatbevétel', '-Kamatkiadás', '+Díjak', '-HR ktg', '-Marketing', '-Értékcsökk.', '-Piackutatás', '+Egyéb', '-Céltartalék', '-Adó', 'PROFIT'];
+  const jtrVals = [kamatBev, -kamatRaf, dijBev - dijRaf, -hr, -marketing - projekt, -amort, -piackut, egyeb, -celtart, -ado, adozasUtani];
 
   let running = 0;
   const wfData = jtrVals.map((v, i) => {
