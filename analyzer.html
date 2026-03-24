@@ -549,8 +549,31 @@ const TEAM_COLORS_ALPHA = {
 };
 
 // ===== GLOBALS =====
-const TEAMS = ['Trifolium', 'Aranytartalék', 'JTR', 'Mester Hármas', 'BIC Elit'];
-const JTR = 2; // index
+let TEAMS = [];
+let JTR = 0;
+
+function detectTeams(rows) {
+  // Find the first row that has team names (multiple non-empty cells after the label)
+  for (let i = 0; i < Math.min(5, rows.length); i++) {
+    const row = rows[i];
+    const names = [];
+    for (let j = 1; j < row.length; j++) {
+      const v = String(row[j] || '').trim();
+      if (v && v.length > 0 && v.length < 30) names.push(v);
+    }
+    if (names.length >= 2) return names; // Found team names
+  }
+  return ['Csapat 1', 'Csapat 2', 'Csapat 3', 'Csapat 4', 'Csapat 5'];
+}
+
+function detectJTR(teams) {
+  // Find which team is "ours" - look for "JTR"
+  for (let i = 0; i < teams.length; i++) {
+    if (teams[i].toUpperCase() === 'JTR') return i;
+  }
+  // Fallback: default to index 2
+  return Math.min(2, teams.length - 1);
+}
 let allData = {}; // {sheetName: parsedData}
 let currentPeriod = '0';
 let charts = {};
@@ -574,6 +597,12 @@ function handleFile(file) {
       const json = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
       allData[name] = json;
     });
+    // Csapatnevek dinamikus felismerése az első sheetből
+    const firstSheetKey = Object.keys(allData).sort((a,b) => parseInt(a)-parseInt(b))[0];
+    const firstSheet = allData[firstSheetKey];
+    TEAMS = detectTeams(firstSheet);
+    JTR = detectJTR(TEAMS);
+
     const periods = Object.keys(allData).sort((a,b) => parseInt(a)-parseInt(b));
     currentPeriod = periods[periods.length - 1];
     const sel = document.getElementById('periodSelect');
@@ -1127,7 +1156,10 @@ function renderHitelBetetArany(rows) {
     html += `<div style="margin-top:10px; font-size:12px; line-height:1.8;">`;
     html += `<div>Hitel: <strong style="color:#e94560;">${fmt(d.hitel)}</strong></div>`;
     html += `<div>Betét: <strong style="color:#4caf50;">${fmt(d.betet)}</strong></div>`;
-    html += `<div>Arány: <strong>${ratio}%</strong></div>`;
+    const hitelPctDisp = total > 0 ? Math.round(d.hitel / total * 100) : 50;
+    const betetPctDisp = total > 0 ? Math.round(d.betet / total * 100) : 50;
+    html += `<div style="font-size:16px; font-weight:700; margin:4px 0;"><span style="color:#e94560;">${hitelPctDisp}</span> : <span style="color:#4caf50;">${betetPctDisp}</span></div>`;
+    html += `<div style="font-size:10px; color:#888;">hitel : betét</div>`;
 
     if (d.hiany > 0) {
       html += `<div style="margin-top:6px; padding:4px 8px; background:rgba(233,69,96,0.15); border-radius:4px; color:#e94560; font-weight:600;">`;
@@ -1617,8 +1649,13 @@ function calcFluk(wage, piaci) {
   piaci = piaci || 930;
   return -Math.round(34.42 * Math.pow(piaci / wage, 1.525));
 }
-function calcKihaszn(letszam) {
-  return 75.13 + 5250 / letszam;
+function calcKihaszn(letszam, training) {
+  // Alap kihasználtság (képzés=70 referenciapontnál)
+  const baseKihaszn = 75.13 + 5250 / letszam;
+  // Képzés hatás: minden +1 képzés/fő ≈ -0.18% kihasználtság (a 3 adatpontból)
+  // Referencia: képzés=70
+  const trainEffect = (70 - (training || 70)) * 0.18;
+  return baseKihaszn + trainEffect;
 }
 function calcHRCost(wage, hire, training, letszamStart, piaci) {
   piaci = piaci || 930;
@@ -1627,7 +1664,7 @@ function calcHRCost(wage, hire, training, letszamStart, piaci) {
   const szemKtg = letszam * wage;
   const kepzKtg = letszam * training;
   const felvKtg = Math.abs(hire) * 200;
-  const kihaszn = calcKihaszn(letszam);
+  const kihaszn = calcKihaszn(letszam, training);
   const tulora = kihaszn > 100 ? letszam * wage * ((kihaszn - 100) / 100) * 3.5 : 0;
   return { wage, hire, training, fluk, letszam, kihaszn, szemKtg, kepzKtg, felvKtg, tulora, osszKtg: szemKtg + kepzKtg + felvKtg + tulora };
 }
