@@ -308,6 +308,7 @@ button:hover { background: #c73850; }
     <label>Periodus:</label>
     <select id="periodSelect" onchange="switchPeriod(this.value)"></select>
   </div>
+  <a href="https://nagytam94.github.io/dmb-optimizer/" target="_blank" style="background:#e94560; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">Marketing Kalkulátor →</a>
 </div>
 
 <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -666,15 +667,12 @@ function renderRVScoreboard(rows) {
     {label: 'ROA', key: 'roa', dec: 2},
     {label: 'Büntetőpont ' + infoBtn(INFO.bunteto.title, INFO.bunteto.content), key: 'bunteto', dec: 0},
     {label: 'Piaci rangsor', key: 'rangsor', dec: 0},
-    {label: '--- RV Komponensek ---', key: null},
-    {label: 'Alap (15)', key: 'base', dec: 2},
-    {label: 'ROA komponens ' + infoBtn(INFO.roa.title, INFO.roa.content), key: 'sqrtComp', dec: 2},
-    {label: 'Hitel komponens ' + infoBtn(INFO.hitelComp.title, INFO.hitelComp.content), key: 'hitelComp', dec: 2},
-    {label: 'Profit komponens ' + infoBtn(INFO.profitComp.title, INFO.profitComp.content), key: 'profitComp', dec: 2},
-    {label: 'Eredm. komponens ' + infoBtn(INFO.eredmComp.title, INFO.eredmComp.content), key: 'eredmComp', dec: 2},
-    {label: '--- RV Excel komponensek ---', key: null},
-    {label: 'RV Profit komp. (Excel)', key: 'rvProfitComp', dec: 2},
-    {label: 'RV Eredm. komp. (Excel)', key: 'eredmtartRVcomp', dec: 2},
+    {label: '--- Árfolyam összetevők (ebből áll össze a részvényárfolyam) ---', key: null},
+    {label: 'Fix alap — mindenkinél 15 pont', key: 'base', dec: 2},
+    {label: 'Hatékonyság rész — profitod az eszközeidhez képest ' + infoBtn(INFO.roa.title, INFO.roa.content), key: 'sqrtComp', dec: 2},
+    {label: 'Hitelállomány rész — minél több hiteled van, annál több pont ' + infoBtn(INFO.hitelComp.title, INFO.hitelComp.content), key: 'hitelComp', dec: 2},
+    {label: 'Profit rész — minél nagyobb a profitod, annál több pont ' + infoBtn(INFO.profitComp.title, INFO.profitComp.content), key: 'profitComp', dec: 2},
+    {label: 'Eredménytartalék rész — felhalmozott korábbi profit ' + infoBtn(INFO.eredmComp.title, INFO.eredmComp.content), key: 'eredmComp', dec: 2},
   ];
 
   compRows.forEach(cr => {
