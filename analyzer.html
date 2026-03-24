@@ -232,6 +232,91 @@ tr:hover { background: rgba(233,69,96,0.05); }
   cursor: pointer;
 }
 
+/* Game Info Bar */
+#gameInfo {
+  background: #0f3460;
+  padding: 10px 30px;
+  font-size: 14px;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* HR Optimizer */
+.hr-slider-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.hr-slider-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hr-slider-item label {
+  font-size: 12px;
+  color: #aaa;
+}
+.hr-slider-item input[type=number] {
+  background: #1a1a2e;
+  color: #fff;
+  border: 1px solid #0f3460;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+}
+.hr-slider-item input[type=range] {
+  width: 100%;
+  accent-color: #e94560;
+}
+.hr-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.hr-result-card {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.hr-result-card .hr-val {
+  font-size: 22px;
+  font-weight: 700;
+}
+.hr-result-card .hr-label {
+  font-size: 11px;
+  color: #aaa;
+}
+.hr-optimal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.hr-optimal-table th {
+  font-size: 11px;
+}
+.hr-optimal-table td, .hr-optimal-table th {
+  padding: 6px 8px;
+}
+.hr-last-round-box {
+  background: rgba(76,175,80,0.15);
+  border: 2px solid #4caf50;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #4caf50;
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .hr-slider-group { grid-template-columns: 1fr; }
+}
+
 /* RV Kalkulator */
 .calc-group {
   display: grid;
@@ -311,6 +396,12 @@ button:hover { background: #c73850; }
   <a href="https://nagytam94.github.io/dmb-optimizer/" target="_blank" style="background:#e94560; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">Marketing Kalkulátor →</a>
 </div>
 
+<div id="gameInfo">
+  <span id="gameType"></span>
+  <span id="gameRounds"></span>
+  <span id="gameWarning" style="color:#e94560; font-weight:bold;"></span>
+</div>
+
 <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
   <h2>Excel fajl feltoltese</h2>
   <p>Huzd ide az exportalt Excel fajlt, vagy kattints a tallozashoz</p>
@@ -357,7 +448,13 @@ button:hover { background: #c73850; }
       <div id="decisionContent"></div>
     </div>
 
-    <!-- Panel 6: RV Kalkulator -->
+    <!-- Panel 6: HR Optimalizátor -->
+    <div class="panel full" id="panelHR">
+      <h3>HR Optimalizátor</h3>
+      <div id="hrContent"></div>
+    </div>
+
+    <!-- Panel 7: RV Kalkulator -->
     <div class="panel full" id="panelSim">
       <h3>RV Kalkulator</h3>
       <div id="simContent"></div>
@@ -478,6 +575,25 @@ function handleFile(file) {
     document.getElementById('periodSelector').style.display = 'flex';
     dropZone.style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
+
+    // Körszámláló logika
+    const fileName = file.name.toLowerCase();
+    const isTeszt = fileName.includes('teszt');
+    const totalDecisionRounds = isTeszt ? 2 : 3;
+    const totalRounds = totalDecisionRounds + 1;
+    const completedRounds = Object.keys(allData).length;
+    const currentDecisionRound = completedRounds - 1;
+    const remainingRounds = totalDecisionRounds - currentDecisionRound;
+    const isLastRound = remainingRounds <= 1;
+
+    window._gameInfo = { isTeszt, totalDecisionRounds, completedRounds, currentDecisionRound, remainingRounds, isLastRound };
+
+    const giDiv = document.getElementById('gameInfo');
+    giDiv.style.display = 'flex';
+    document.getElementById('gameType').innerHTML = isTeszt ? '🧪 Tesztforduló' : '🏆 Éles játék';
+    document.getElementById('gameRounds').innerHTML = `Döntési kör: ${currentDecisionRound}/${totalDecisionRounds} | Hátralévő: ${remainingRounds}`;
+    document.getElementById('gameWarning').innerHTML = isLastRound ? '⚠️ UTOLSÓ KÖR! Költségek minimalizálása: képzés 0-ra, felesleges IT eladása, bér minimálisra' : '';
+
     renderAll();
   };
   reader.readAsArrayBuffer(file);
@@ -590,6 +706,7 @@ function renderAll() {
   renderHitelPortfolio(rows);
   renderBetetForras(rows);
   renderDecisionAnalysis(rows);
+  renderHROptimizer(rows);
   renderCalculator(rows);
 }
 
@@ -1347,6 +1464,244 @@ function resetCalc() {
   document.getElementById('calcHitel').value = baseHitel;
   document.getElementById('calcEredm').value = baseEredm;
   updateCalc();
+}
+
+// ===== HR OPTIMIZER FORMULAS =====
+function calcFluk(wage, piaci) {
+  piaci = piaci || 930;
+  return -Math.round(34.42 * Math.pow(piaci / wage, 1.525));
+}
+function calcKihaszn(letszam) {
+  return 75.13 + 5250 / letszam;
+}
+function calcHRCost(wage, hire, training, letszamStart, piaci) {
+  piaci = piaci || 930;
+  const fluk = calcFluk(wage, piaci);
+  const letszam = Math.max(1, letszamStart + hire + fluk);
+  const szemKtg = letszam * wage;
+  const kepzKtg = letszam * training;
+  const felvKtg = Math.abs(hire) * 200;
+  const kihaszn = calcKihaszn(letszam);
+  const tulora = kihaszn > 100 ? letszam * wage * ((kihaszn - 100) / 100) * 3.5 : 0;
+  return { wage, hire, training, fluk, letszam, kihaszn, szemKtg, kepzKtg, felvKtg, tulora, osszKtg: szemKtg + kepzKtg + felvKtg + tulora };
+}
+
+function kihasznColor(k) {
+  if (k > 100) return '#e94560';
+  if (k > 95) return '#f5a623';
+  if (k >= 85) return '#4caf50';
+  return '#2196f3';
+}
+
+// ===== PANEL 6: HR OPTIMALIZÁTOR =====
+function renderHROptimizer(rows) {
+  const isLastRound = window._gameInfo && window._gameInfo.isLastRound;
+  const piaciAtlag = 930;
+
+  // Adatok kiolvasása az Excel-ből
+  const penStart = findRowContains(rows, 'Pénzügyek');
+  const eredmKim = findRowContains(rows, 'Eredménykimutatás', penStart > -1 ? penStart : 0);
+  const base = eredmKim > -1 ? eredmKim : 0;
+
+  const rSzemKtg = getFieldInBlock(rows, base, 'Személyi jellegű', 60);
+  const rKepzKtg = getFieldInBlock(rows, base, 'Képzési költség', 60);
+
+  // HR szekció keresése
+  const hrStart = findRowContains(rows, 'Emberi erőforrás');
+  const hrBase = hrStart > -1 ? hrStart : 0;
+
+  const rLetszam = getFieldInBlock(rows, hrBase, 'Létszám', 30);
+  const rBer = getFieldInBlock(rows, hrBase, 'Bér / fő', 30);
+  const rBerAlt = rBer < 0 ? getFieldInBlock(rows, hrBase, 'Bér/fő', 30) : rBer;
+  const rKepzes = getFieldInBlock(rows, hrBase, 'Képzés / fő', 30);
+  const rKepzesAlt = rKepzes < 0 ? getFieldInBlock(rows, hrBase, 'Képzés/fő', 30) : rKepzes;
+  const rFelvetel = getFieldInBlock(rows, hrBase, 'Felvétel', 30);
+  const rFluk = getFieldInBlock(rows, hrBase, 'Fluktuáció', 30);
+  const rKihaszn = getFieldInBlock(rows, hrBase, 'Kihasználtság', 30);
+
+  const curLetszam = rLetszam > -1 ? jtrVal(rows, rLetszam) : 300;
+  const curBer = (rBerAlt > -1 ? jtrVal(rows, rBerAlt) : 930);
+  const curKepzes = (rKepzesAlt > -1 ? jtrVal(rows, rKepzesAlt) : 70);
+  const curFelvetel = rFelvetel > -1 ? jtrVal(rows, rFelvetel) : 0;
+  const curFluk = rFluk > -1 ? jtrVal(rows, rFluk) : 0;
+  const curKihaszn = rKihaszn > -1 ? jtrVal(rows, rKihaszn) : 0;
+
+  // Globális tárolás
+  window._hrParams = { curLetszam, curBer, curKepzes, curFelvetel, curFluk, curKihaszn, piaciAtlag };
+
+  const defaultKepzes = isLastRound ? 0 : curKepzes;
+
+  let html = '';
+
+  // Utolsó kör figyelmeztetés
+  if (isLastRound) {
+    html += `<div class="hr-last-round-box">⚠️ UTOLSÓ KÖR — Ajánlás: Bér minimumra (450), Képzés 0-ra, felesleges IT eladása</div>`;
+  }
+
+  // Jelenlegi adatok
+  html += `<div style="margin-bottom:12px; font-size:13px; color:#aaa;">`;
+  html += `Jelenlegi: Létszám: <strong style="color:#fff;">${curLetszam}</strong> | Bér/fő: <strong style="color:#fff;">${fmtN(curBer)}</strong> | Képzés/fő: <strong style="color:#fff;">${fmtN(curKepzes)}</strong> | Fluktuáció: <strong style="color:#fff;">${curFluk}</strong> | Kihasználtság: <strong style="color:#fff;">${curKihaszn.toFixed(1)}%</strong>`;
+  html += `</div>`;
+
+  // Csúszkák
+  html += `<div class="hr-slider-group">`;
+  html += `<div class="hr-slider-item">`;
+  html += `<label>Bér / fő</label>`;
+  html += `<input type="number" id="hrWage" value="${curBer}" min="450" max="1500" step="10" oninput="document.getElementById('hrWage_range').value=this.value; updateHR();">`;
+  html += `<input type="range" id="hrWage_range" min="450" max="1500" step="10" value="${curBer}" oninput="document.getElementById('hrWage').value=this.value; updateHR();">`;
+  html += `</div>`;
+
+  html += `<div class="hr-slider-item">`;
+  html += `<label>Felvétel (negatív = elbocsátás)</label>`;
+  html += `<input type="number" id="hrHire" value="0" min="-50" max="200" step="1" oninput="document.getElementById('hrHire_range').value=this.value; updateHR();">`;
+  html += `<input type="range" id="hrHire_range" min="-50" max="200" step="1" value="0" oninput="document.getElementById('hrHire').value=this.value; updateHR();">`;
+  html += `</div>`;
+
+  html += `<div class="hr-slider-item">`;
+  html += `<label>Képzés / fő</label>`;
+  html += `<input type="number" id="hrTraining" value="${defaultKepzes}" min="0" max="200" step="5" oninput="document.getElementById('hrTraining_range').value=this.value; updateHR();">`;
+  html += `<input type="range" id="hrTraining_range" min="0" max="200" step="5" value="${defaultKepzes}" oninput="document.getElementById('hrTraining').value=this.value; updateHR();">`;
+  html += `</div>`;
+  html += `</div>`;
+
+  // Eredmények
+  html += `<div class="hr-result-grid" id="hrResults"></div>`;
+
+  // IT eladás javaslat
+  html += `<div id="hrITadvice"></div>`;
+
+  // Optimális keresés gomb
+  html += `<div style="margin-top:14px;"><button onclick="runHRGridSearch()">🔍 Optimális keresés</button></div>`;
+  html += `<div id="hrOptimalResults"></div>`;
+
+  document.getElementById('hrContent').innerHTML = html;
+  updateHR();
+}
+
+function updateHR() {
+  if (!window._hrParams) return;
+  const { curLetszam, piaciAtlag } = window._hrParams;
+
+  const wage = parseFloat(document.getElementById('hrWage').value) || 450;
+  const hire = parseInt(document.getElementById('hrHire').value) || 0;
+  const training = parseFloat(document.getElementById('hrTraining').value) || 0;
+
+  const result = calcHRCost(wage, hire, training, curLetszam, piaciAtlag);
+
+  const kColor = kihasznColor(result.kihaszn);
+  const kihasznLabel = result.kihaszn > 100 ? 'TÚLÓRA!' : result.kihaszn > 95 ? 'Szoros' : result.kihaszn >= 85 ? 'Optimális' : 'Alacsony';
+
+  let rhtml = '';
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#e94560;">${result.fluk}</div><div class="hr-label">Fluktuáció</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#f5a623;">${result.letszam}</div><div class="hr-label">Létszám végén</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:${kColor};">${result.kihaszn.toFixed(1)}%</div><div class="hr-label">Kihasználtság (${kihasznLabel})</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.szemKtg)}</div><div class="hr-label">Személyi ktg</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.kepzKtg)}</div><div class="hr-label">Képzési ktg</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.felvKtg)}</div><div class="hr-label">Felvételi ktg</div></div>`;
+  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:${result.tulora > 0 ? '#e94560' : '#4caf50'};">${fmtN(result.tulora)}</div><div class="hr-label">Túlóra ktg</div></div>`;
+  rhtml += `<div class="hr-result-card" style="border:2px solid #f5a623;"><div class="hr-val" style="color:#f5a623;">${fmtN(result.osszKtg)}</div><div class="hr-label">ÖSSZES HR KÖLTSÉG</div></div>`;
+
+  document.getElementById('hrResults').innerHTML = rhtml;
+
+  // IT eladás javaslat
+  renderITadvice();
+}
+
+function renderITadvice() {
+  const rows = getRows();
+  const itStart = findRowContains(rows, 'Információ technológia');
+  const itBase = itStart > -1 ? itStart : findRowContains(rows, 'IT');
+  const rITkihaszn = itBase > -1 ? getFieldInBlock(rows, itBase, 'Kihasználtság', 30) : -1;
+  const rITeszkoz = itBase > -1 ? getFieldInBlock(rows, itBase, 'IT eszközök', 30) : -1;
+  const rITeszkozAlt = rITeszkoz < 0 && itBase > -1 ? getFieldInBlock(rows, itBase, 'Eszközök', 30) : rITeszkoz;
+
+  let html = '';
+  if (rITkihaszn > -1) {
+    const itKihaszn = jtrVal(rows, rITkihaszn);
+    const itEszkoz = rITeszkozAlt > -1 ? jtrVal(rows, rITeszkozAlt) : 0;
+    if (itKihaszn > 0 && itKihaszn < 50) {
+      const felesleg = Math.round(itEszkoz * (1 - itKihaszn / 100));
+      const becsultBev = Math.round(felesleg * 0.5);
+      html += `<div class="alert-box" style="background:rgba(33,150,243,0.15); border-color:#2196f3; margin-top:10px;">`;
+      html += `💡 IT felesleg: ~${fmtN(felesleg)} EM eladható (kihasználtság: ${itKihaszn.toFixed(1)}%) — Becsült eladási bevétel: ~${fmtN(becsultBev)}`;
+      html += `</div>`;
+    }
+  }
+  document.getElementById('hrITadvice').innerHTML = html;
+}
+
+function runHRGridSearch() {
+  if (!window._hrParams) return;
+  const { curLetszam, piaciAtlag } = window._hrParams;
+  const isLastRound = window._gameInfo && window._gameInfo.isLastRound;
+
+  const results = [];
+  const trainingLevels = isLastRound ? [0] : [0, 30, 70];
+
+  for (let w = 450; w <= 1000; w += 50) {
+    for (let h = -20; h <= 100; h += 10) {
+      for (let t of trainingLevels) {
+        const r = calcHRCost(w, h, t, curLetszam, piaciAtlag);
+        if (r.kihaszn >= 85 && r.kihaszn <= 98) {
+          results.push(r);
+        }
+      }
+    }
+  }
+
+  results.sort((a, b) => a.osszKtg - b.osszKtg);
+  const top10 = results.slice(0, 10);
+
+  let html = '';
+  if (isLastRound) {
+    html += `<div class="hr-last-round-box" style="margin-top:10px;">Utolsó kör: képzés nem szükséges!</div>`;
+  }
+
+  if (top10.length === 0) {
+    html += `<p style="color:#aaa; margin-top:10px;">Nem található megfelelő kombináció a szűrési feltételekkel.</p>`;
+  } else {
+    html += `<p style="color:#aaa; margin-top:12px;">Top ${top10.length} legolcsóbb kombináció (kihasználtság 85-98%):</p>`;
+    html += `<table class="hr-optimal-table">`;
+    html += `<tr><th>#</th><th>Bér/fő</th><th>Felvétel</th><th>Képzés/fő</th><th>Fluk.</th><th>Létszám</th><th>Kihaszn.%</th><th>Szem.ktg</th><th>Képz.ktg</th><th>Felv.ktg</th><th>Túlóra</th><th style="color:#f5a623;">Össz.ktg</th></tr>`;
+    top10.forEach((r, i) => {
+      const kColor = kihasznColor(r.kihaszn);
+      const isBest = i === 0;
+      const rowStyle = isBest ? 'background:rgba(76,175,80,0.15); font-weight:600;' : '';
+      html += `<tr style="${rowStyle}">`;
+      html += `<td>${i + 1}${isBest ? ' ⭐' : ''}</td>`;
+      html += `<td>${r.wage}</td>`;
+      html += `<td>${r.hire}</td>`;
+      html += `<td>${r.training}</td>`;
+      html += `<td>${r.fluk}</td>`;
+      html += `<td>${r.letszam}</td>`;
+      html += `<td style="color:${kColor};">${r.kihaszn.toFixed(1)}%</td>`;
+      html += `<td>${fmtN(r.szemKtg)}</td>`;
+      html += `<td>${fmtN(r.kepzKtg)}</td>`;
+      html += `<td>${fmtN(r.felvKtg)}</td>`;
+      html += `<td>${fmtN(r.tulora)}</td>`;
+      html += `<td style="color:#f5a623; font-weight:700;">${fmtN(r.osszKtg)}</td>`;
+      html += `</tr>`;
+    });
+    html += `</table>`;
+
+    // Legjobb beállítás alkalmazása gomb
+    if (top10[0]) {
+      const best = top10[0];
+      html += `<div style="margin-top:10px;"><button onclick="applyHROptimal(${best.wage}, ${best.hire}, ${best.training})">✅ Legjobb beállítás alkalmazása</button></div>`;
+    }
+  }
+
+  document.getElementById('hrOptimalResults').innerHTML = html;
+}
+
+function applyHROptimal(wage, hire, training) {
+  document.getElementById('hrWage').value = wage;
+  document.getElementById('hrWage_range').value = wage;
+  document.getElementById('hrHire').value = hire;
+  document.getElementById('hrHire_range').value = hire;
+  document.getElementById('hrTraining').value = training;
+  document.getElementById('hrTraining_range').value = training;
+  updateHR();
 }
 </script>
 </body>
