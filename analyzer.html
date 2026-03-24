@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMB 2026 Elemző Dashboard</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a1a2e; }
+::-webkit-scrollbar-thumb { background: #16213e; border-radius: 4px; }
+
+.header {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #e94560;
+}
+.header h1 { font-size: 24px; color: #fff; }
+.header h1 span { color: #e94560; }
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.period-selector label { color: #aaa; font-size: 14px; }
+.period-selector select {
+  background: #1a1a2e;
+  color: #fff;
+  border: 1px solid #e94560;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  border: 3px dashed #e94560;
+  border-radius: 20px;
+  margin: 40px;
+  padding: 60px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.drop-zone.dragover {
+  background: rgba(233,69,96,0.1);
+  border-color: #4caf50;
+}
+.drop-zone h2 { font-size: 28px; margin-bottom: 15px; color: #e94560; }
+.drop-zone p { font-size: 16px; color: #888; }
+.drop-zone input { display: none; }
+
+.dashboard { display: none; padding: 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.panel {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #0f3460;
+  overflow-x: auto;
+}
+.panel.full { grid-column: 1 / -1; }
+.panel h3 {
+  color: #e94560;
+  margin-bottom: 15px;
+  font-size: 18px;
+  border-bottom: 1px solid #0f3460;
+  padding-bottom: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+th { color: #e94560; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+td:first-child, th:first-child { text-align: left; }
+tr:hover { background: rgba(233,69,96,0.05); }
+
+.jtr-col { background: rgba(245,166,35,0.08); }
+.jtr-highlight { border: 2px solid #f5a623 !important; }
+.pos { color: #4caf50; }
+.neg { color: #e94560; }
+.neutral { color: #f5a623; }
+.alert-box {
+  background: rgba(233,69,96,0.15);
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.good-box {
+  background: rgba(76,175,80,0.15);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-green { background: rgba(76,175,80,0.2); color: #4caf50; }
+.badge-red { background: rgba(233,69,96,0.2); color: #e94560; }
+.badge-yellow { background: rgba(245,166,35,0.2); color: #f5a623; }
+
+.chart-container { position: relative; height: 350px; margin-top: 10px; }
+.chart-container-sm { position: relative; height: 280px; margin-top: 10px; }
+
+.slider-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.slider-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.slider-item label {
+  font-size: 12px;
+  color: #aaa;
+}
+.slider-item input[type=range] {
+  width: 100%;
+  accent-color: #e94560;
+}
+.slider-val {
+  font-size: 13px;
+  color: #f5a623;
+  font-weight: 600;
+  text-align: center;
+}
+.sim-result {
+  background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(233,69,96,0.1));
+  border: 2px solid #f5a623;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin: 15px 0;
+}
+.sim-result .rv-val { font-size: 42px; font-weight: 700; color: #f5a623; }
+.sim-result .rv-label { font-size: 14px; color: #aaa; }
+.sim-result .rv-diff { font-size: 18px; margin-top: 5px; }
+
+button {
+  background: #e94560;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+button:hover { background: #c73850; }
+
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.decision-card {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 4px solid;
+}
+.decision-card.good { border-left-color: #4caf50; }
+.decision-card.bad { border-left-color: #e94560; }
+.decision-card.meh { border-left-color: #f5a623; }
+.decision-card .field { font-size: 13px; font-weight: 600; color: #fff; }
+.decision-card .vals { font-size: 12px; color: #aaa; margin-top: 4px; }
+.decision-card .impact { font-size: 12px; margin-top: 4px; font-weight: 600; }
+
+.source-bar {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 40px;
+  margin: 8px 0;
+}
+.source-bar div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 30px;
+  white-space: nowrap;
+  padding: 0 6px;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .slider-group { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>DMB</span> 2026 Elemző Dashboard</h1>
+  <div class="period-selector" id="periodSelector" style="display:none;">
+    <label>Periódus:</label>
+    <select id="periodSelect" onchange="switchPeriod(this.value)"></select>
+  </div>
+</div>
+
+<div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+  <h2>Excel fájl feltöltése</h2>
+  <p>Húzd ide az exportált Excel fájlt, vagy kattints a tallózáshoz</p>
+  <input type="file" id="fileInput" accept=".xlsx,.xls">
+</div>
+
+<div class="dashboard" id="dashboard">
+  <div class="grid">
+    <!-- Panel 1: RV Scoreboard -->
+    <div class="panel" id="panelRV">
+      <h3>Részvényárfolyam Scoreboard</h3>
+      <div id="rvContent"></div>
+    </div>
+
+    <!-- Panel 2: Profit Waterfall -->
+    <div class="panel" id="panelProfit">
+      <h3>Profit Waterfall</h3>
+      <div class="chart-container" id="waterfallContainer">
+        <canvas id="waterfallChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Panel 3: Hitel Portfolio -->
+    <div class="panel full" id="panelHitel">
+      <h3>Hitel Portfólió Mátrix</h3>
+      <div id="hitelContent"></div>
+      <div class="chart-container-sm">
+        <canvas id="hitelChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Panel 4: Betét & Forrás -->
+    <div class="panel full" id="panelBetet">
+      <h3>Betét & Forrás Elemzés</h3>
+      <div id="betetContent"></div>
+    </div>
+
+    <!-- Panel 5: Döntés Hatás -->
+    <div class="panel full" id="panelDecision">
+      <h3>Döntés Hatás Elemzés</h3>
+      <div id="decisionContent"></div>
+    </div>
+
+    <!-- Panel 6: Szimulátor -->
+    <div class="panel full" id="panelSim">
+      <h3>P(n+1) Szimulátor</h3>
+      <div id="simContent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== GLOBALS =====
+const TEAMS = ['Trifolium', 'Aranytartalék', 'JTR', 'Mester Hármas', 'BIC Elit'];
+const JTR = 2; // index
+let allData = {}; // {sheetName: parsedData}
+let currentPeriod = '0';
+let charts = {};
+
+// ===== DROP ZONE =====
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, {type:'array'});
+    allData = {};
+    wb.SheetNames.forEach(name => {
+      const sheet = wb.Sheets[name];
+      const json = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+      allData[name] = json;
+    });
+    const periods = Object.keys(allData).sort((a,b) => parseInt(a)-parseInt(b));
+    currentPeriod = periods[periods.length - 1];
+    const sel = document.getElementById('periodSelect');
+    sel.innerHTML = periods.map(p => `<option value="${p}" ${p===currentPeriod?'selected':''}>P${p}</option>`).join('');
+    document.getElementById('periodSelector').style.display = 'flex';
+    dropZone.style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    renderAll();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function switchPeriod(p) {
+  currentPeriod = p;
+  renderAll();
+}
+
+// ===== PARSE HELPERS =====
+function getRows() { return allData[currentPeriod] || []; }
+
+function findRow(rows, label, startFrom=0) {
+  const l = label.trim().toLowerCase();
+  for(let i=startFrom; i<rows.length; i++) {
+    const cell = String(rows[i][0] || '').trim().toLowerCase();
+    if(cell === l) return i;
+  }
+  return -1;
+}
+
+function findRowContains(rows, label, startFrom=0) {
+  const l = label.trim().toLowerCase();
+  for(let i=startFrom; i<rows.length; i++) {
+    const cell = String(rows[i][0] || '').trim().toLowerCase();
+    if(cell.includes(l)) return i;
+  }
+  return -1;
+}
+
+function val(rows, rowIdx, teamIdx) {
+  if(rowIdx < 0 || rowIdx >= rows.length) return 0;
+  const v = rows[rowIdx][teamIdx + 1];
+  if(v === '' || v === undefined || v === null) return 0;
+  if(typeof v === 'number') return v;
+  const s = String(v).replace(/\s/g,'').replace(',','.');
+  return parseFloat(s) || 0;
+}
+
+function vals(rows, rowIdx) {
+  return TEAMS.map((_, i) => val(rows, rowIdx, i));
+}
+
+function jtrVal(rows, rowIdx) { return val(rows, rowIdx, JTR); }
+
+function othersAvg(rows, rowIdx) {
+  let sum = 0, cnt = 0;
+  for(let i=0; i<5; i++) {
+    if(i === JTR) continue;
+    const v = val(rows, rowIdx, i);
+    if(v !== 0 || true) { sum += v; cnt++; }
+  }
+  return cnt ? sum/cnt : 0;
+}
+
+function fmt(v, decimals=0) {
+  if(Math.abs(v) >= 1000000) return (v/1000000).toFixed(1) + 'M';
+  if(Math.abs(v) >= 1000) return (v/1000).toFixed(0) + 'k';
+  return v.toFixed(decimals);
+}
+
+function fmtN(v, decimals=0) {
+  return v.toLocaleString('hu-HU', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+}
+
+function pctDiff(jtr, avg) {
+  if(avg === 0) return 0;
+  return ((jtr - avg) / Math.abs(avg)) * 100;
+}
+
+// ===== SECTION FINDERS =====
+function findSection(rows, sectionName) {
+  return findRow(rows, sectionName);
+}
+
+function findSubSection(rows, parentStart, subName) {
+  for(let i = parentStart+1; i < rows.length; i++) {
+    const cell = String(rows[i][0] || '');
+    const trimmed = cell.trim().toLowerCase();
+    // if we hit another top-level section, stop
+    if(cell.length > 0 && cell[0] !== ' ' && i > parentStart + 1) break;
+    if(trimmed === subName.toLowerCase()) return i;
+  }
+  return -1;
+}
+
+function getFieldInBlock(rows, blockStart, fieldName, maxSearch=20) {
+  const l = fieldName.trim().toLowerCase();
+  for(let i = blockStart; i < Math.min(blockStart + maxSearch, rows.length); i++) {
+    const cell = String(rows[i][0] || '').trim().toLowerCase();
+    if(cell === l) return i;
+    if(cell.includes(l)) return i;
+  }
+  return -1;
+}
+
+// ===== RV FORMULA =====
+function calcRV(profit, eszkoz, hitel, eredmtart) {
+  if(eszkoz === 0) return 15;
+  return 15 + Math.sqrt(Math.max(0, profit / eszkoz)) * 130 + 0.45 * hitel / 600000 + 0.20 * profit / 10000 + 0.25 * eredmtart / 50000;
+}
+
+// ===== RENDER ALL =====
+function renderAll() {
+  const rows = getRows();
+  if(!rows.length) return;
+  renderRVScoreboard(rows);
+  renderProfitWaterfall(rows);
+  renderHitelPortfolio(rows);
+  renderBetetForras(rows);
+  renderDecisionAnalysis(rows);
+  renderSimulator(rows);
+}
+
+// ===== PANEL 1: RV SCOREBOARD =====
+function renderRVScoreboard(rows) {
+  const summaryStart = findSection(rows, 'Összefoglaló');
+  const rEszkoz = findRow(rows, 'Eszközök', summaryStart > -1 ? summaryStart : 0);
+  const rROA = findRowContains(rows, 'ROA', summaryStart > -1 ? summaryStart : 0);
+  const rHitel = findRowContains(rows, 'Hitelállomány', summaryStart > -1 ? summaryStart : 0);
+  const rProfit = findRow(rows, 'Profit', summaryStart > -1 ? summaryStart : 0);
+  const rEredm = findRowContains(rows, 'Eredménytartalék', summaryStart > -1 ? summaryStart : 0);
+  const rBunteto = findRowContains(rows, 'Büntet', summaryStart > -1 ? summaryStart : 0);
+  const rRV = findRowContains(rows, 'Részvényárfolyam', rEredm > -1 ? rEredm : 0);
+  const rRangsor = findRowContains(rows, 'rangsor', summaryStart > -1 ? summaryStart : 0);
+
+  // Also find elemzés fields
+  const elemStart = findRowContains(rows, 'Elemzés', summaryStart > -1 ? summaryStart : 0);
+  const rNKB = findRowContains(rows, 'Nettó kamatbevétel', elemStart > -1 ? elemStart : 0);
+  const rAdozas = findRowContains(rows, 'Adózás utáni eredmény', elemStart > -1 ? elemStart : 0);
+  const rTeljHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+  const rTeljBetet = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
+  const rOsszEsz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
+  const rPenz = findRowContains(rows, 'Pénzeszköz', elemStart > -1 ? elemStart : 0);
+
+  // Calc RV components for each team
+  const rvData = TEAMS.map((name, ti) => {
+    const profit = val(rows, rProfit, ti);
+    const eszkoz = rEszkoz > -1 ? val(rows, rEszkoz, ti) : 15;
+    const hitel = rTeljHitel > -1 ? val(rows, rTeljHitel, ti) : 0;
+    const eredmtart = rEredm > -1 ? val(rows, rEredm, ti) : 0;
+    const rv = rRV > -1 ? val(rows, rRV, ti) : calcRV(profit, val(rows, rOsszEsz, ti), hitel, eredmtart);
+
+    // Components
+    const ossz_esz = rOsszEsz > -1 ? val(rows, rOsszEsz, ti) : 1;
+    const base = 15;
+    const sqrtComp = ossz_esz > 0 ? Math.sqrt(Math.max(0, profit / ossz_esz)) * 130 : 0;
+    const hitelComp = 0.45 * hitel / 600000;
+    const profitComp = 0.20 * profit / 10000;
+    const eredmComp = 0.25 * eredmtart / 50000;
+    const calcedRV = base + sqrtComp + hitelComp + profitComp + eredmComp;
+
+    return {name, profit, eszkoz: ossz_esz, hitel, eredmtart, rv, calcedRV,
+      base, sqrtComp, hitelComp, profitComp, eredmComp,
+      roa: rROA > -1 ? val(rows, rROA, ti) : 0,
+      bunteto: rBunteto > -1 ? val(rows, rBunteto, ti) : 0,
+      rangsor: rRangsor > -1 ? val(rows, rRangsor, ti) : 0
+    };
+  });
+
+  const jtr = rvData[JTR];
+  const othAvgRV = rvData.filter((_,i) => i!==JTR).reduce((s,d) => s+d.rv, 0) / 4;
+
+  let html = '<table>';
+  html += '<tr><th></th>';
+  TEAMS.forEach((t,i) => {
+    const cls = i===JTR ? 'jtr-col' : '';
+    const style = i===JTR ? 'style="border:2px solid #f5a623; color:#f5a623;"' : '';
+    html += `<th class="${cls}" ${style}>${t}</th>`;
+  });
+  html += '</tr>';
+
+  const compRows = [
+    {label: 'Részvényárfolyam', key: 'rv', dec: 2},
+    {label: 'Számított RV', key: 'calcedRV', dec: 2},
+    {label: 'Profit', key: 'profit', dec: 2},
+    {label: 'Összes eszköz', key: 'eszkoz', dec: 0},
+    {label: 'Hitelállomány', key: 'hitel', dec: 0},
+    {label: 'Eredménytartalék', key: 'eredmtart', dec: 0},
+    {label: 'ROA', key: 'roa', dec: 2},
+    {label: 'Büntetőpont', key: 'bunteto', dec: 0},
+    {label: 'Piaci rangsor', key: 'rangsor', dec: 0},
+    {label: '--- Komponensek ---', key: null},
+    {label: 'Alap (15)', key: 'base', dec: 2},
+    {label: 'Profit/Eszköz hatás', key: 'sqrtComp', dec: 2},
+    {label: 'Hitel hatás', key: 'hitelComp', dec: 2},
+    {label: 'Profit hatás', key: 'profitComp', dec: 2},
+    {label: 'Eredménytart. hatás', key: 'eredmComp', dec: 2},
+  ];
+
+  compRows.forEach(cr => {
+    if(!cr.key) {
+      html += `<tr><td colspan="6" style="color:#e94560; font-weight:600; padding-top:12px;">${cr.label}</td></tr>`;
+      return;
+    }
+    html += '<tr>';
+    html += `<td>${cr.label}</td>`;
+    const jtrV = jtr[cr.key];
+    const othAvg = rvData.filter((_,i)=>i!==JTR).reduce((s,d) => s+d[cr.key],0)/4;
+    TEAMS.forEach((t,i) => {
+      const v = rvData[i][cr.key];
+      const cls = i===JTR ? 'jtr-col' : '';
+      let color = '';
+      if(i === JTR && cr.key !== 'bunteto' && cr.key !== 'rangsor') {
+        color = jtrV > othAvg ? 'color:#4caf50' : jtrV < othAvg ? 'color:#e94560' : '';
+      }
+      if(i === JTR && cr.key === 'bunteto') {
+        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#e94560' : '';
+      }
+      if(i === JTR && cr.key === 'rangsor') {
+        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#e94560' : '';
+      }
+      const style = i===JTR ? `style="border-left:2px solid #f5a623; border-right:2px solid #f5a623; ${color}"` : '';
+      html += `<td class="${cls}" ${style}>${Math.abs(v) >= 1000 ? fmtN(v, cr.dec) : v.toFixed(cr.dec)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+
+  const diff = jtr.rv - othAvgRV;
+  const diffCls = diff >= 0 ? 'pos' : 'neg';
+  html += `<div style="margin-top:12px; font-size:14px;">JTR vs átlag: <span class="${diffCls}" style="font-size:18px; font-weight:700;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}</span> (${((diff/othAvgRV)*100).toFixed(1)}%)</div>`;
+
+  document.getElementById('rvContent').innerHTML = html;
+}
+
+// ===== PANEL 2: PROFIT WATERFALL =====
+function renderProfitWaterfall(rows) {
+  // Find Pénzügyek / Eredménykimutatás section
+  const penStart = findRowContains(rows, 'Pénzügyek');
+  const eredmKim = findRowContains(rows, 'Eredménykimutatás', penStart > -1 ? penStart : 0);
+
+  // Try to find P&L rows
+  const base = eredmKim > -1 ? eredmKim : 0;
+  const rKamatBev = getFieldInBlock(rows, base, 'Kamat bevételek', 40);
+  const rKamatRaf = getFieldInBlock(rows, base, 'Kamat ráfordítások', 40);
+  const rNKB = getFieldInBlock(rows, base, 'Nettó kamatbevétel', 40);
+  const rDijBev = getFieldInBlock(rows, base, 'Díj és jutalék bevételek', 60);
+  const rDijRaf = getFieldInBlock(rows, base, 'Díj és jutalék ráfordítások', 60);
+  const rSzemKtg = getFieldInBlock(rows, base, 'Személyi jellegű költségek', 60);
+  const rAdminKtg = getFieldInBlock(rows, base, 'Adminisztrációs költségek', 60);
+  const rKepzKtg = getFieldInBlock(rows, base, 'Képzési költségek', 60);
+  const rAmort = getFieldInBlock(rows, base, 'Amortizáció', 60);
+  const rCeltart = getFieldInBlock(rows, base, 'Céltartalék', 60);
+  const rMarketing = getFieldInBlock(rows, base, 'Marketing', 60);
+  const rPromoKtg = getFieldInBlock(rows, base, 'Promóciós költség', 60);
+  const rAdo = getFieldInBlock(rows, base, 'Adó', 60);
+  const rAdozasUtani = getFieldInBlock(rows, base, 'Adózás utáni eredmény', 60);
+
+  // For JTR (col JTR)
+  const kamatBev = rKamatBev > -1 ? jtrVal(rows, rKamatBev) : 0;
+  const kamatRaf = rKamatRaf > -1 ? Math.abs(jtrVal(rows, rKamatRaf)) : 0;
+  const dijBev = rDijBev > -1 ? jtrVal(rows, rDijBev) : 0;
+  const dijRaf = rDijRaf > -1 ? Math.abs(jtrVal(rows, rDijRaf)) : 0;
+  const szemKtg = rSzemKtg > -1 ? Math.abs(jtrVal(rows, rSzemKtg)) : 0;
+  const adminKtg = rAdminKtg > -1 ? Math.abs(jtrVal(rows, rAdminKtg)) : 0;
+  const kepzKtg = rKepzKtg > -1 ? Math.abs(jtrVal(rows, rKepzKtg)) : 0;
+  const marketing = rMarketing > -1 ? Math.abs(jtrVal(rows, rMarketing)) : (rPromoKtg > -1 ? Math.abs(jtrVal(rows, rPromoKtg)) : 0);
+  const amort = rAmort > -1 ? Math.abs(jtrVal(rows, rAmort)) : 0;
+  const celtart = rCeltart > -1 ? Math.abs(jtrVal(rows, rCeltart)) : 0;
+  const ado = rAdo > -1 ? Math.abs(jtrVal(rows, rAdo)) : 0;
+  const adozasUtani = rAdozasUtani > -1 ? jtrVal(rows, rAdozasUtani) : 0;
+  const hr = szemKtg + adminKtg + kepzKtg;
+
+  // Also find from Összefoglaló for competitors
+  const elemStart = findRowContains(rows, 'Elemzés');
+  const rNKBsum = findRowContains(rows, 'Nettó kamatbevétel', elemStart > -1 ? elemStart : 0);
+  const rAdozSum = findRowContains(rows, 'Adózás utáni eredmény', elemStart > -1 ? elemStart : 0);
+
+  const waterLabels = ['Kamatbevétel', '-Kamatkiadás', '+Díjak', '-HR ktg', '-Marketing', '-Amortizáció', '-Céltartalék', '-Adó', 'PROFIT'];
+  const jtrVals = [kamatBev, -kamatRaf, dijBev - dijRaf, -hr, -marketing, -amort, -celtart, -ado, adozasUtani];
+
+  // Build waterfall as stacked bar
+  // Use floating bars
+  const wfColors = jtrVals.map(v => v >= 0 ? 'rgba(76,175,80,0.8)' : 'rgba(233,69,96,0.8)');
+
+  // Calculate running total for waterfall
+  let running = 0;
+  const wfData = jtrVals.map((v, i) => {
+    if(i === jtrVals.length - 1) {
+      // final bar from 0 to total
+      return [0, v];
+    }
+    const bottom = running;
+    running += v;
+    return v >= 0 ? [bottom, bottom + v] : [running, bottom];
+  });
+
+  if(charts.waterfall) charts.waterfall.destroy();
+  charts.waterfall = new Chart(document.getElementById('waterfallChart'), {
+    type: 'bar',
+    data: {
+      labels: waterLabels,
+      datasets: [{
+        label: 'JTR',
+        data: wfData.map(d => d[1] - d[0]),
+        backgroundColor: jtrVals.map((v,i) => i === jtrVals.length-1 ? 'rgba(245,166,35,0.9)' : v >= 0 ? 'rgba(76,175,80,0.8)' : 'rgba(233,69,96,0.8)'),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = jtrVals[ctx.dataIndex];
+              return `${ctx.label}: ${fmtN(v)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#aaa', font: {size: 11} }, grid: { display: false } },
+        y: { ticks: { color: '#aaa', callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// ===== PANEL 3: HITEL PORTFOLIO =====
+function renderHitelPortfolio(rows) {
+  const hitelTypes = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
+  const hitelStart = findRowContains(rows, 'Hitelek');
+
+  const data = [];
+  let searchFrom = hitelStart > -1 ? hitelStart : 0;
+
+  hitelTypes.forEach(ht => {
+    const htRow = findRowContains(rows, ht, searchFrom);
+    if(htRow < 0) { data.push(null); return; }
+    searchFrom = htRow + 1;
+
+    const rKamat = getFieldInBlock(rows, htRow, 'Kamat, %', 15);
+    const rPromo = getFieldInBlock(rows, htRow, 'Promóciós költség', 15);
+    const rUjHitel = getFieldInBlock(rows, htRow, 'Új hitel', 15);
+    const rKezDij = getFieldInBlock(rows, htRow, 'Hitel kezelési díj, %', 15);
+    const rJutalek = getFieldInBlock(rows, htRow, 'Fizetett jutalék, %', 15);
+    const rBehajthat = getFieldInBlock(rows, htRow, 'Behajthatatlan hitelek', 15);
+    const rAllomany = getFieldInBlock(rows, htRow, 'Hitelállomány', 15);
+    const rUjKamatBev = getFieldInBlock(rows, htRow, 'Új kamat bevétel', 15);
+    const rTeljKamatBev = getFieldInBlock(rows, htRow, 'Teljes kamatbevétel', 15);
+    const rAtlKamat = getFieldInBlock(rows, htRow, 'Átlagos hitelkamat, %', 15);
+
+    const d = {
+      name: ht,
+      kamat: vals(rows, rKamat),
+      promo: vals(rows, rPromo),
+      ujHitel: vals(rows, rUjHitel),
+      kezDij: vals(rows, rKezDij),
+      jutalek: vals(rows, rJutalek),
+      behajthat: vals(rows, rBehajthat),
+      allomany: vals(rows, rAllomany),
+      ujKamatBev: vals(rows, rUjKamatBev),
+      teljKamatBev: vals(rows, rTeljKamatBev),
+      atlKamat: vals(rows, rAtlKamat)
+    };
+    data.push(d);
+  });
+
+  // Bankközi kamat for net margin calc
+  const rBKBetet = findRowContains(rows, 'Bankközi kamatok - betét');
+  const rBKHitel = findRowContains(rows, 'Bankközi kamatok - hitel');
+  const bkBetet = rBKBetet > -1 ? jtrVal(rows, rBKBetet) : 0.9;
+  const bkHitel = rBKHitel > -1 ? jtrVal(rows, rBKHitel) : 3.7;
+
+  let html = '<table><tr><th>Típus</th><th>JTR Áll.</th><th>Átlag Áll.</th><th>JTR Kamat%</th><th>Átl. Kamat%</th><th>JTR Bevétel</th><th>Behajth%</th><th>JTR vs Átl%</th></tr>';
+
+  const jtrAllomany = [];
+  const othAllomany = [];
+  const chartLabels = [];
+
+  data.forEach(d => {
+    if(!d) return;
+    const jtrAll = d.allomany[JTR];
+    const othAll = d.allomany.filter((_,i)=>i!==JTR).reduce((s,v)=>s+v,0)/4;
+    const jtrK = d.kamat[JTR];
+    const othK = d.kamat.filter((_,i)=>i!==JTR).reduce((s,v)=>s+v,0)/4;
+    const jtrBev = d.teljKamatBev[JTR];
+    const behajthPct = jtrAll > 0 ? (d.behajthat[JTR] / jtrAll * 100) : 0;
+    const diffPct = othAll > 0 ? ((jtrAll - othAll) / othAll * 100) : 0;
+    const behCls = behajthPct > 5 ? 'neg' : '';
+
+    html += `<tr>`;
+    html += `<td>${d.name}</td>`;
+    html += `<td class="jtr-col">${fmtN(jtrAll)}</td>`;
+    html += `<td>${fmtN(othAll)}</td>`;
+    html += `<td class="jtr-col">${jtrK.toFixed(1)}%</td>`;
+    html += `<td>${othK.toFixed(1)}%</td>`;
+    html += `<td class="jtr-col">${fmtN(jtrBev)}</td>`;
+    html += `<td class="${behCls}">${behajthPct.toFixed(1)}%</td>`;
+    html += `<td class="${diffPct >= 0 ? 'pos' : 'neg'}">${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(1)}%</td>`;
+    html += '</tr>';
+
+    jtrAllomany.push(jtrAll);
+    othAllomany.push(othAll);
+    chartLabels.push(d.name.replace('hitel','').replace('kölcsön','').trim());
+  });
+  html += '</table>';
+
+  // Alert for high behajthatatlan
+  data.forEach(d => {
+    if(!d) return;
+    const jtrAll = d.allomany[JTR];
+    const behPct = jtrAll > 0 ? (d.behajthat[JTR] / jtrAll * 100) : 0;
+    if(behPct > 5) {
+      html += `<div class="alert-box">⚠ ${d.name}: Behajthatatlan hitelek ${behPct.toFixed(1)}% (>${'5'}%)! Összeg: ${fmtN(d.behajthat[JTR])}</div>`;
+    }
+  });
+
+  document.getElementById('hitelContent').innerHTML = html;
+
+  // Chart
+  if(charts.hitel) charts.hitel.destroy();
+  charts.hitel = new Chart(document.getElementById('hitelChart'), {
+    type: 'bar',
+    data: {
+      labels: chartLabels,
+      datasets: [
+        { label: 'JTR', data: jtrAllomany, backgroundColor: 'rgba(245,166,35,0.8)' },
+        { label: 'Átlag', data: othAllomany, backgroundColor: 'rgba(76,175,80,0.5)' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#aaa' } } },
+      scales: {
+        x: { ticks: { color: '#aaa' }, grid: { display: false } },
+        y: { ticks: { color: '#aaa', callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// ===== PANEL 4: BETÉT & FORRÁS =====
+function renderBetetForras(rows) {
+  const betetTypes = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
+  const betetStart = findRowContains(rows, 'Betétek');
+
+  let html = '<table><tr><th>Típus</th><th>JTR Kamat%</th><th>Átl. Kamat%</th><th>JTR Állomány</th><th>Átl. Állomány</th><th>JTR Kamatkiadás</th><th>Szvezetési díj%</th></tr>';
+
+  let searchFrom = betetStart > -1 ? betetStart : 0;
+  let totalJtrBetet = 0, totalOthBetet = 0;
+
+  betetTypes.forEach(bt => {
+    const btRow = findRowContains(rows, bt, searchFrom);
+    if(btRow < 0) return;
+    searchFrom = btRow + 1;
+
+    const rKamat = getFieldInBlock(rows, btRow, 'Kamat, %', 15);
+    const rAllomany = getFieldInBlock(rows, btRow, 'Betétállomány', 15);
+    const rKamatkiad = getFieldInBlock(rows, btRow, 'Teljes kamatkiadás', 15);
+    if(rKamatkiad < 0) {
+      // try alternative
+    }
+    const rSzDij = getFieldInBlock(rows, btRow, 'Számlavezetési díj, %', 15);
+
+    const jtrK = rKamat > -1 ? jtrVal(rows, rKamat) : 0;
+    const othK = rKamat > -1 ? othersAvg(rows, rKamat) : 0;
+    const jtrAll = rAllomany > -1 ? jtrVal(rows, rAllomany) : 0;
+    const othAll = rAllomany > -1 ? othersAvg(rows, rAllomany) : 0;
+    const jtrKiad = rKamatkiad > -1 ? jtrVal(rows, rKamatkiad) : 0;
+    const szDij = rSzDij > -1 ? jtrVal(rows, rSzDij) : 0;
+
+    totalJtrBetet += jtrAll;
+    totalOthBetet += othAll;
+
+    html += `<tr>`;
+    html += `<td>${bt}</td>`;
+    html += `<td class="jtr-col">${jtrK.toFixed(2)}%</td>`;
+    html += `<td>${othK.toFixed(2)}%</td>`;
+    html += `<td class="jtr-col">${fmtN(jtrAll)}</td>`;
+    html += `<td>${fmtN(othAll)}</td>`;
+    html += `<td class="jtr-col">${fmtN(jtrKiad)}</td>`;
+    html += `<td>${szDij.toFixed(2)}%</td>`;
+    html += '</tr>';
+  });
+  html += '</table>';
+
+  // Bankközi pozíció
+  const rBKBetet = findRowContains(rows, 'Bankközi kamatok - betét');
+  const rBKHitel = findRowContains(rows, 'Bankközi kamatok - hitel');
+  const bkBetetK = rBKBetet > -1 ? jtrVal(rows, rBKBetet) : 0;
+  const bkHitelK = rBKHitel > -1 ? jtrVal(rows, rBKHitel) : 0;
+
+  // Find Mérleg data for source/use analysis
+  const merlegStart = findRowContains(rows, 'Mérleg');
+  const cfStart = findRowContains(rows, 'Cash flow');
+
+  // Use Összefoglaló data for source breakdown
+  const elemStart = findRowContains(rows, 'Elemzés');
+  const rTeljHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+  const rTeljBetet = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
+  const rOsszEsz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
+  const rPenz = findRowContains(rows, 'Pénzeszköz', elemStart > -1 ? elemStart : 0);
+
+  const teljHitel = rTeljHitel > -1 ? jtrVal(rows, rTeljHitel) : 0;
+  const teljBetet = rTeljBetet > -1 ? jtrVal(rows, rTeljBetet) : 0;
+  const osszEsz = rOsszEsz > -1 ? jtrVal(rows, rOsszEsz) : 0;
+  const penz = rPenz > -1 ? jtrVal(rows, rPenz) : 0;
+
+  // Bankközi = Összes eszköz - betét - saját tőke (approx)
+  const bankkoziNetto = osszEsz - teljBetet; // rough estimate: if positive, bk borrowing
+  const bankkoziTartozas = Math.max(0, teljHitel + penz - teljBetet);
+
+  html += `<h4 style="color:#e94560; margin-top:15px;">Forrás-Felhasználás (JTR)</h4>`;
+
+  // Source bar
+  const totalForrás = teljBetet + bankkoziTartozas;
+  const totalFelhaszn = teljHitel + penz;
+
+  if(totalForrás > 0) {
+    const betetPct = (teljBetet / osszEsz * 100);
+    const bkPct = (bankkoziTartozas / osszEsz * 100);
+    const egyebPct = 100 - betetPct - bkPct;
+
+    html += `<div style="font-size:13px; color:#aaa; margin:5px 0;">Források:</div>`;
+    html += `<div class="source-bar">`;
+    html += `<div style="width:${betetPct}%; background:#4caf50;">Betét ${betetPct.toFixed(0)}%</div>`;
+    if(bkPct > 1) html += `<div style="width:${Math.max(bkPct,5)}%; background:#e94560;">Bankközi ${bkPct.toFixed(0)}%</div>`;
+    html += `<div style="width:${Math.max(egyebPct,5)}%; background:#0f3460;">Saját tőke ${egyebPct.toFixed(0)}%</div>`;
+    html += `</div>`;
+
+    const hitelPct = (teljHitel / osszEsz * 100);
+    const penzPct = (penz / osszEsz * 100);
+    const egyebFPct = 100 - hitelPct - penzPct;
+
+    html += `<div style="font-size:13px; color:#aaa; margin:5px 0;">Felhasználás:</div>`;
+    html += `<div class="source-bar">`;
+    html += `<div style="width:${hitelPct}%; background:#f5a623;">Hitelek ${hitelPct.toFixed(0)}%</div>`;
+    html += `<div style="width:${Math.max(penzPct,5)}%; background:#2196f3;">Pénz ${penzPct.toFixed(0)}%</div>`;
+    if(egyebFPct > 1) html += `<div style="width:${egyebFPct}%; background:#0f3460;">Egyéb ${egyebFPct.toFixed(0)}%</div>`;
+    html += `</div>`;
+  }
+
+  // Bankközi alert
+  if(bankkoziTartozas > 100000) {
+    const evesKtg = bankkoziTartozas * bkHitelK / 100;
+    html += `<div class="alert-box">⚠ BANKKÖZI TARTOZÁS: ${fmtN(bankkoziTartozas)} összeg ${bkHitelK}%-on! Éves extra költség: ${fmtN(evesKtg)}</div>`;
+  }
+
+  // Betétkamat vs bankközi
+  html += `<div style="margin-top:10px; font-size:13px;">`;
+  html += `<div>Bankközi betéti kamat: <strong>${bkBetetK}%</strong> | Bankközi hitelkamat: <strong>${bkHitelK}%</strong></div>`;
+  html += `</div>`;
+
+  document.getElementById('betetContent').innerHTML = html;
+}
+
+// ===== PANEL 5: DÖNTÉS HATÁS =====
+function renderDecisionAnalysis(rows) {
+  const decisions = [];
+
+  // Check hitelek
+  const hitelTypes = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
+  const hitelStart = findRowContains(rows, 'Hitelek');
+  let searchFrom = hitelStart > -1 ? hitelStart : 0;
+
+  hitelTypes.forEach(ht => {
+    const htRow = findRowContains(rows, ht, searchFrom);
+    if(htRow < 0) return;
+    searchFrom = htRow + 1;
+
+    const fields = ['Kamat, %', 'Promóciós költség', 'Hitel kezelési díj, %', 'Fizetett jutalék, %'];
+    fields.forEach(f => {
+      const r = getFieldInBlock(rows, htRow, f, 15);
+      if(r < 0) return;
+      const jtrV = jtrVal(rows, r);
+      const othAvg = othersAvg(rows, r);
+      const diff = jtrV - othAvg;
+      if(Math.abs(diff) < 0.01 && Math.abs(diff) < Math.abs(othAvg) * 0.001) return; // same
+
+      let impact = '';
+      let type = 'meh';
+
+      if(f.includes('Kamat')) {
+        if(diff > 0) { impact = 'Magasabb kamat → több bevétel, de kevesebb ügyfél'; type = Math.abs(diff) > 3 ? 'bad' : 'meh'; }
+        else { impact = 'Alacsonyabb kamat → versenyképesebb, több ügyfél'; type = 'good'; }
+      } else if(f.includes('Promóció')) {
+        if(diff > 0) { impact = 'Több promóció → több ügyfél, de drágább'; type = 'meh'; }
+        else { impact = 'Kevesebb promóció → kevesebb ügyfél'; type = diff < -othAvg*0.3 ? 'bad' : 'meh'; }
+      } else if(f.includes('kezelési díj')) {
+        if(diff > 0) { impact = 'Magasabb díj → extra bevétel'; type = 'good'; }
+        else { impact = 'Alacsonyabb díj → kevesebb díjbevétel'; type = 'bad'; }
+      } else if(f.includes('jutalék')) {
+        if(diff > 0) { impact = 'Magasabb jutalék → több értékesítés, de drágább'; type = 'meh'; }
+        else { impact = 'Alacsonyabb jutalék → kevesebb értékesítés'; type = 'meh'; }
+      }
+
+      decisions.push({
+        field: `${ht} → ${f}`,
+        jtrV: f.includes('%') ? jtrV.toFixed(2) + '%' : fmtN(jtrV),
+        othV: f.includes('%') ? othAvg.toFixed(2) + '%' : fmtN(othAvg),
+        diff: diff,
+        impact,
+        type
+      });
+    });
+  });
+
+  // Check betétek
+  const betetTypes = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
+  const betetStart = findRowContains(rows, 'Betétek');
+  searchFrom = betetStart > -1 ? betetStart : 0;
+
+  betetTypes.forEach(bt => {
+    const btRow = findRowContains(rows, bt, searchFrom);
+    if(btRow < 0) return;
+    searchFrom = btRow + 1;
+
+    const fields = ['Kamat, %', 'Promóciós költség', 'Számlavezetési díj, %', 'Fizetett jutalék, %'];
+    fields.forEach(f => {
+      const r = getFieldInBlock(rows, btRow, f, 15);
+      if(r < 0) return;
+      const jtrV = jtrVal(rows, r);
+      const othAvg = othersAvg(rows, r);
+      const diff = jtrV - othAvg;
+      if(Math.abs(diff) < 0.01 && Math.abs(diff) < Math.abs(othAvg) * 0.001) return;
+
+      let impact = '';
+      let type = 'meh';
+
+      if(f.includes('Kamat')) {
+        if(diff > 0) { impact = 'Magasabb betétkamat → több betétes, de drágább'; type = Math.abs(diff) > 1 ? 'bad' : 'meh'; }
+        else { impact = 'Alacsonyabb betétkamat → olcsóbb forrás'; type = 'good'; }
+      } else if(f.includes('Promóció')) {
+        if(diff > 0) { impact = 'Több promóció → több betétes'; type = 'meh'; }
+        else { impact = 'Kevesebb promóció'; type = 'meh'; }
+      } else if(f.includes('díj')) {
+        if(diff > 0) { impact = 'Magasabb díj → extra bevétel, de kevesebb betétes'; type = 'meh'; }
+        else { impact = 'Alacsonyabb díj → versenyképesebb'; type = 'meh'; }
+      }
+
+      decisions.push({
+        field: `${bt} → ${f}`,
+        jtrV: f.includes('%') ? jtrV.toFixed(2) + '%' : fmtN(jtrV),
+        othV: f.includes('%') ? othAvg.toFixed(2) + '%' : fmtN(othAvg),
+        diff,
+        impact,
+        type
+      });
+    });
+  });
+
+  // Filter only meaningful diffs
+  const meaningful = decisions.filter(d => Math.abs(d.diff) > 0.001);
+
+  let html = '';
+  if(meaningful.length === 0) {
+    html = '<p style="color:#aaa;">Nincs jelentős eltérés a JTR és a versenytársak döntései között.</p>';
+  } else {
+    html = `<p style="color:#aaa; margin-bottom:10px;">${meaningful.length} eltérés detektálva</p>`;
+    html += '<div class="decision-grid">';
+    meaningful.sort((a,b) => Math.abs(b.diff) - Math.abs(a.diff));
+    meaningful.forEach(d => {
+      const badge = d.type === 'good' ? 'badge-green' : d.type === 'bad' ? 'badge-red' : 'badge-yellow';
+      html += `<div class="decision-card ${d.type}">`;
+      html += `<div class="field">${d.field}</div>`;
+      html += `<div class="vals">JTR: <strong>${d.jtrV}</strong> | Átlag: <strong>${d.othV}</strong></div>`;
+      html += `<div class="impact"><span class="badge ${badge}">${d.type === 'good' ? 'Jó döntés' : d.type === 'bad' ? 'Kockázatos' : 'Semleges'}</span> ${d.impact}</div>`;
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('decisionContent').innerHTML = html;
+}
+
+// ===== PANEL 6: SZIMULÁTOR =====
+function renderSimulator(rows) {
+  // Collect current JTR values for sliders
+  const hitelTypes = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
+  const betetTypes = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
+
+  const sliders = [];
+
+  // Hitel kamatok & promo
+  const hitelStart = findRowContains(rows, 'Hitelek');
+  let searchFrom = hitelStart > -1 ? hitelStart : 0;
+
+  hitelTypes.forEach(ht => {
+    const htRow = findRowContains(rows, ht, searchFrom);
+    if(htRow < 0) return;
+    searchFrom = htRow + 1;
+    const rKamat = getFieldInBlock(rows, htRow, 'Kamat, %', 15);
+    const rPromo = getFieldInBlock(rows, htRow, 'Promóciós költség', 15);
+    if(rKamat > -1) {
+      sliders.push({id: `hk_${ht}`, label: `${ht} kamat%`, val: jtrVal(rows, rKamat), min: 1, max: 40, step: 0.5, type: 'hitelkamat'});
+    }
+    if(rPromo > -1) {
+      sliders.push({id: `hp_${ht}`, label: `${ht} promóció`, val: jtrVal(rows, rPromo), min: 0, max: 200000, step: 1000, type: 'promo'});
+    }
+  });
+
+  // Betét kamatok
+  const betetStart = findRowContains(rows, 'Betétek');
+  searchFrom = betetStart > -1 ? betetStart : 0;
+
+  betetTypes.forEach(bt => {
+    const btRow = findRowContains(rows, bt, searchFrom);
+    if(btRow < 0) return;
+    searchFrom = btRow + 1;
+    const rKamat = getFieldInBlock(rows, btRow, 'Kamat, %', 15);
+    if(rKamat > -1) {
+      sliders.push({id: `bk_${bt}`, label: `${bt} kamat%`, val: jtrVal(rows, rKamat), min: 0, max: 15, step: 0.1, type: 'betetkamat'});
+    }
+  });
+
+  // Current RV
+  const summaryStart = findSection(rows, 'Összefoglaló');
+  const rRV = findRowContains(rows, 'Részvényárfolyam', summaryStart > -1 ? summaryStart + 5 : 0);
+  const currentRV = rRV > -1 ? jtrVal(rows, rRV) : 0;
+
+  const elemStart = findRowContains(rows, 'Elemzés');
+  const rTeljHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+  const rOsszEsz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
+  const rProfit = findRow(rows, 'Profit', summaryStart > -1 ? summaryStart : 0);
+  const rEredm = findRowContains(rows, 'Eredménytartalék', summaryStart > -1 ? summaryStart : 0);
+
+  const baseProfit = rProfit > -1 ? jtrVal(rows, rProfit) : 0;
+  const baseEszkoz = rOsszEsz > -1 ? jtrVal(rows, rOsszEsz) : 1;
+  const baseHitel = rTeljHitel > -1 ? jtrVal(rows, rTeljHitel) : 0;
+  const baseEredm = rEredm > -1 ? jtrVal(rows, rEredm) : 0;
+
+  let html = '';
+  html += `<div class="sim-result" id="simResult">`;
+  html += `<div class="rv-label">Jelenlegi Részvényárfolyam</div>`;
+  html += `<div class="rv-val" id="simRVval">${currentRV.toFixed(2)}</div>`;
+  html += `<div class="rv-diff" id="simRVdiff"></div>`;
+  html += `</div>`;
+
+  html += `<div style="display:flex; justify-content:flex-end; margin-bottom:10px;"><button onclick="resetSliders()">Reset eredeti értékekre</button></div>`;
+
+  html += '<div class="slider-group">';
+  sliders.forEach(s => {
+    html += `<div class="slider-item">`;
+    html += `<label>${s.label}</label>`;
+    html += `<input type="range" id="slider_${s.id}" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.val}" data-orig="${s.val}" data-type="${s.type}" oninput="updateSim()">`;
+    html += `<div class="slider-val" id="val_${s.id}">${s.type.includes('kamat') ? s.val.toFixed(1) + '%' : fmtN(s.val)}</div>`;
+    html += `</div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('simContent').innerHTML = html;
+
+  // Store sim params globally
+  window.simParams = { sliders, currentRV, baseProfit, baseEszkoz, baseHitel, baseEredm };
+  updateSim();
+}
+
+function updateSim() {
+  if(!window.simParams) return;
+  const {sliders, currentRV, baseProfit, baseEszkoz, baseHitel, baseEredm} = window.simParams;
+
+  // Estimate impact: each kamat change and promo change affects profit
+  let profitDelta = 0;
+  let hitelDelta = 0;
+
+  sliders.forEach(s => {
+    const el = document.getElementById('slider_' + s.id);
+    if(!el) return;
+    const newVal = parseFloat(el.value);
+    const origVal = parseFloat(el.dataset.orig);
+    const diff = newVal - origVal;
+
+    // Display
+    const dispEl = document.getElementById('val_' + s.id);
+    if(dispEl) {
+      dispEl.textContent = s.type.includes('kamat') ? newVal.toFixed(1) + '%' : fmtN(newVal);
+      dispEl.style.color = Math.abs(diff) > 0.01 ? '#e94560' : '#f5a623';
+    }
+
+    if(s.type === 'hitelkamat') {
+      // Higher rate: more revenue per unit but potentially less volume
+      // Rough: +1% kamat on existing portfolio -> +portfolio * 0.01 revenue, -2% volume
+      const portfolioShare = baseHitel / 5; // rough per-product
+      profitDelta += diff * portfolioShare * 0.008; // revenue effect
+      hitelDelta -= diff * portfolioShare * 0.015; // volume loss per % point
+    } else if(s.type === 'promo') {
+      // More promo: more volume, costs money
+      profitDelta -= diff; // direct cost
+      hitelDelta += diff * 15; // rough: each 1 promo $ -> 15$ volume
+    } else if(s.type === 'betetkamat') {
+      // Higher betét kamat: more deposits (cheaper than bankközi if <3.7%), but costs more
+      const betetShare = baseEszkoz * 0.2; // rough
+      profitDelta -= diff * betetShare * 0.008;
+    }
+  });
+
+  const newProfit = baseProfit + profitDelta / 1000000; // profit is in display units
+  // Actually profit from summary is already in display format, let's keep it simple
+  const newHitel = baseHitel + hitelDelta;
+  const newEszkoz = baseEszkoz + hitelDelta * 0.5; // rough
+  const newEredm = baseEredm + profitDelta * 0.7 / 1000000;
+
+  // Use the formula with percentage-based values
+  // The summary values might be in different scales, just estimate direction
+  const estimatedRV = calcRV(
+    Math.max(0, baseProfit + profitDelta * 0.000001),
+    Math.max(1, baseEszkoz),
+    Math.max(0, newHitel),
+    Math.max(0, baseEredm + profitDelta * 0.0000007)
+  );
+
+  // Simpler: just show relative change from current
+  const rvChange = estimatedRV - calcRV(baseProfit, baseEszkoz, baseHitel, baseEredm);
+  const displayRV = currentRV + rvChange;
+
+  const valEl = document.getElementById('simRVval');
+  const diffEl = document.getElementById('simRVdiff');
+  if(valEl) valEl.textContent = displayRV.toFixed(2);
+  if(diffEl) {
+    const d = displayRV - currentRV;
+    diffEl.innerHTML = d === 0 ? '' : `<span class="${d >= 0 ? 'pos' : 'neg'}">${d >= 0 ? '+' : ''}${d.toFixed(2)} (${((d/currentRV)*100).toFixed(1)}%)</span>`;
+  }
+}
+
+function resetSliders() {
+  if(!window.simParams) return;
+  window.simParams.sliders.forEach(s => {
+    const el = document.getElementById('slider_' + s.id);
+    if(el) { el.value = s.val; }
+  });
+  updateSim();
+}
+
+// Number format helper for sim
+function fmtNSim(v) {
+  return v.toLocaleString('hu-HU', {maximumFractionDigits: 0});
+}
+</script>
+</body>
+</html>
