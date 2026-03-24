@@ -612,10 +612,10 @@ function renderRVScoreboard(rows) {
   const rOsszEsz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
   const rPenz = findRowContains(rows, 'Pénzeszköz', elemStart > -1 ? elemStart : 0);
 
-  const rEredmTenyleges = findRowContains(rows, 'Eredménytartalék', elemStart > -1 ? elemStart : 0);
+  // Eredménytartalék: a Mérlegben csak JTR-nek van, de MINDEN csapatnál
+  // visszaszámolható az RV komponensből: eredm_real = komponens × 50000 / 0.25
   const merlegStartRV = findRowContains(rows, 'Mérleg');
   const rEredmMerleg = merlegStartRV > -1 ? findRowContains(rows, 'Eredménytartalék', merlegStartRV) : -1;
-  const rEredmReal = (rEredmTenyleges > -1 && rEredmTenyleges !== rEredm) ? rEredmTenyleges : rEredmMerleg;
 
   const rvData = TEAMS.map((name, ti) => {
     const rvProfitComp = val(rows, rProfit, ti);
@@ -623,7 +623,9 @@ function renderRVScoreboard(rows) {
     const eszkoz = rEszkoz > -1 ? val(rows, rEszkoz, ti) : 15;
     const hitel = rTeljHitel > -1 ? val(rows, rTeljHitel, ti) : 0;
     const eredmtartRVcomp = rEredm > -1 ? val(rows, rEredm, ti) : 0;
-    const eredmtartReal = rEredmReal > -1 ? val(rows, rEredmReal, ti) : 0;
+    // Tényleges eredménytartalék: Mérlegből ha van, egyébként visszaszámolva az RV komponensből
+    const eredmMerleg = rEredmMerleg > -1 ? val(rows, rEredmMerleg, ti) : 0;
+    const eredmtartReal = eredmMerleg > 0 ? eredmMerleg : (eredmtartRVcomp * 50000 / 0.25);
     const rv = rRV > -1 ? val(rows, rRV, ti) : 0;
 
     const ossz_esz = rOsszEsz > -1 ? val(rows, rOsszEsz, ti) : 1;
@@ -1245,10 +1247,10 @@ function renderCalculator(rows) {
   html += '<div class="calc-group">';
 
   const inputs = [
-    { id: 'calcProfit', label: 'Adózás utáni eredmény (profit)', val: baseProfit, min: -500000, max: 2000000, step: 10000 },
-    { id: 'calcEszkoz', label: 'Összes eszköz', val: baseEszkoz, min: 100000, max: 10000000, step: 50000 },
-    { id: 'calcHitel', label: 'Teljes hitelállomány', val: baseHitel, min: 0, max: 8000000, step: 50000 },
-    { id: 'calcEredm', label: 'Eredménytartalék', val: baseEredm, min: 0, max: 10000000, step: 50000 },
+    { id: 'calcProfit', label: 'Adózás utáni eredmény (profit)', val: baseProfit, min: Math.round(-baseProfit), max: Math.round(baseProfit * 4), step: 10000 },
+    { id: 'calcEszkoz', label: 'Összes eszköz', val: baseEszkoz, min: Math.round(baseEszkoz * 0.3), max: Math.round(baseEszkoz * 3), step: 100000 },
+    { id: 'calcHitel', label: 'Teljes hitelállomány', val: baseHitel, min: Math.round(baseHitel * 0.3), max: Math.round(baseHitel * 3), step: 100000 },
+    { id: 'calcEredm', label: 'Eredménytartalék', val: baseEredm, min: 0, max: Math.round(baseEredm * 4), step: 50000 },
   ];
 
   inputs.forEach(inp => {
