@@ -433,6 +433,12 @@ button:hover { background: #c73850; }
       </div>
     </div>
 
+    <!-- Panel 3b: Hitel/Betét arány -->
+    <div class="panel full" id="panelHitelBetet">
+      <h3>Hitel / Betét Arány — Csapatonként</h3>
+      <div id="hitelBetetContent"></div>
+    </div>
+
     <!-- Panel 4: Betet & Forras -->
     <div class="panel full" id="panelBetet">
       <h3>Betet & Forras Elemzes</h3>
@@ -704,6 +710,7 @@ function renderAll() {
   renderRVScoreboard(rows);
   renderProfitWaterfall(rows);
   renderHitelPortfolio(rows);
+  renderHitelBetetArany(rows);
   renderBetetForras(rows);
   renderDecisionAnalysis(rows);
   renderHROptimizer(rows);
@@ -1077,6 +1084,102 @@ function renderHitelPortfolio(rows) {
         y: { ticks: { color: '#aaa', callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,0.05)' } }
       }
     }
+  });
+}
+
+// ===== PANEL 3b: HITEL/BETÉT ARÁNY =====
+function renderHitelBetetArany(rows) {
+  const elemStart = findRowContains(rows, 'Elemzés');
+  const rTeljHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+  const rTeljBetet = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
+  const rBKHitel = findRowContains(rows, 'Bankközi kamatok - hitel');
+  const bkHitelKamat = rBKHitel > -1 ? val(rows, rBKHitel, 0) : 3.9;
+
+  // Per team data
+  const teamData = TEAMS.map((name, ti) => {
+    const hitel = rTeljHitel > -1 ? val(rows, rTeljHitel, ti) : 0;
+    const betet = rTeljBetet > -1 ? val(rows, rTeljBetet, ti) : 0;
+    const hiany = Math.max(0, hitel - betet);
+    const tobblet = Math.max(0, betet - hitel);
+    const bkKtg = hiany * bkHitelKamat / 100;
+    return { name, hitel, betet, hiany, tobblet, bkKtg };
+  });
+
+  // Create 5 mini doughnut charts + info cards
+  let html = '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:15px; margin-top:10px;">';
+
+  teamData.forEach((d, i) => {
+    const isJtr = i === JTR;
+    const border = isJtr ? 'border:2px solid #f5a623;' : 'border:1px solid #0f3460;';
+    const total = d.hitel + d.betet;
+    const hitelPct = total > 0 ? (d.hitel / total * 100) : 50;
+    const betetPct = total > 0 ? (d.betet / total * 100) : 50;
+    const ratio = d.betet > 0 ? (d.hitel / d.betet * 100).toFixed(0) : '∞';
+
+    html += `<div style="background:rgba(0,0,0,0.2); border-radius:10px; padding:15px; ${border} text-align:center;">`;
+    html += `<div style="font-weight:700; color:${isJtr ? '#f5a623' : '#e0e0e0'}; font-size:14px; margin-bottom:8px;">${d.name}</div>`;
+
+    // Mini doughnut canvas
+    const canvasId = 'hbPie_' + i;
+    html += `<canvas id="${canvasId}" width="120" height="120" style="margin:0 auto; display:block;"></canvas>`;
+
+    // Stats
+    html += `<div style="margin-top:10px; font-size:12px; line-height:1.8;">`;
+    html += `<div>Hitel: <strong style="color:#e94560;">${fmt(d.hitel)}</strong></div>`;
+    html += `<div>Betét: <strong style="color:#4caf50;">${fmt(d.betet)}</strong></div>`;
+    html += `<div>Arány: <strong>${ratio}%</strong></div>`;
+
+    if (d.hiany > 0) {
+      html += `<div style="margin-top:6px; padding:4px 8px; background:rgba(233,69,96,0.15); border-radius:4px; color:#e94560; font-weight:600;">`;
+      html += `Hiány: ${fmt(d.hiany)}`;
+      html += `<br>BK ktg: ~${fmtN(Math.round(d.bkKtg))}/év`;
+      html += `</div>`;
+    } else if (d.tobblet > 0) {
+      html += `<div style="margin-top:6px; padding:4px 8px; background:rgba(76,175,80,0.15); border-radius:4px; color:#4caf50;">`;
+      html += `Többlet: ${fmt(d.tobblet)}`;
+      html += `</div>`;
+    }
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  // Info text
+  html += `<div style="margin-top:12px; font-size:12px; color:#888;">`;
+  html += `Hitel/Betét arány: ha a hitel > betét, a különbséget bankközi hitelből kell fedezni (${bkHitelKamat}% kamat). `;
+  html += `Ha betét > hitel, a felesleg a bankközin parkol alacsony kamaton.`;
+  html += `</div>`;
+
+  document.getElementById('hitelBetetContent').innerHTML = html;
+
+  // Render mini doughnut charts
+  teamData.forEach((d, i) => {
+    const canvas = document.getElementById('hbPie_' + i);
+    if (!canvas) return;
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Hitel', 'Betét'],
+        datasets: [{
+          data: [d.hitel, d.betet],
+          backgroundColor: ['rgba(233,69,96,0.8)', 'rgba(76,175,80,0.8)'],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: false,
+        cutout: '55%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.label + ': ' + fmtN(ctx.parsed)
+            }
+          }
+        }
+      }
+    });
   });
 }
 
