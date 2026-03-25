@@ -465,7 +465,13 @@ button:hover { background: #c73850; }
       <div id="ellenfelContent"></div>
     </div>
 
-    <!-- Panel 7: RV Kalkulator -->
+    <!-- Panel 7: Ellenfél Viselkedés -->
+    <div class="panel full" id="panelViselkedes">
+      <h3>Ellenfél Döntési Minták</h3>
+      <div id="viselkedesContent"></div>
+    </div>
+
+    <!-- Panel 8: RV Kalkulator -->
     <div class="panel full" id="panelSim">
       <h3>RV Kalkulator</h3>
       <div id="simContent"></div>
@@ -770,6 +776,7 @@ function renderAll() {
   renderBetetForras(rows);
   renderDecisionAnalysis(rows);
   renderEllenfelElemzes(rows);
+  renderViselkedes(rows);
   renderCalculator(rows);
 }
 
@@ -1514,7 +1521,429 @@ function renderDecisionAnalysis(rows) {
   document.getElementById('decisionContent').innerHTML = html;
 }
 
-// ===== PANEL 6: RV KALKULÁTOR =====
+// ===== PANEL 7: ELLENFÉL VISELKEDÉS =====
+function renderViselkedes() {
+  const el = document.getElementById('viselkedesContent');
+  if (!el) return;
+
+  const periods = Object.keys(allData).sort((a, b) => parseInt(a) - parseInt(b));
+  if (periods.length < 2) {
+    el.innerHTML = '<p style="color:#888;">Legalabb 2 periodus kell az elemzeshez.</p>';
+    return;
+  }
+
+  const hitelTypes = ['Folyoszamlahitel', 'Szemelyi kolcson', 'Jelzalog hitel', 'Allami hitel', 'Vallalati hitel'];
+  const hitelTypesDisplay = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
+  const hitelFields = ['Kamat, %', 'Promóciós költség', 'Hitel kezelési díj, %'];
+  const hitelFieldsDisplay = ['Kamat %', 'Promóciós költség', 'Kezelési díj %'];
+
+  const betetTypes = ['Folyoszamla betet', 'Rovid lejaratu betetek', 'Hosszu lejaratu betetek', 'Lakastakarekpenztari betet'];
+  const betetTypesDisplay = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
+  const betetFields = ['Kamat, %', 'Promóciós költség'];
+  const betetFieldsDisplay = ['Kamat %', 'Promóciós költség'];
+
+  // Real search names (as they appear in the spreadsheet)
+  const hitelSearchNames = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
+  const betetSearchNames = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
+
+  // Extract all decision values per period per team
+  // Structure: periodData[periodKey][teamIdx] = { hitel: {type: {field: value}}, betet: {type: {field: value}}, hitelAll, betetAll, profit }
+  const periodData = {};
+  for (const p of periods) {
+    const rows = allData[p];
+    if (!rows || !rows.length) continue;
+    periodData[p] = {};
+
+    const hitelStart = findRowContains(rows, 'Hitelek');
+    const betetStart = findRowContains(rows, 'Betétek');
+    const elemStart = findRowContains(rows, 'Elemzés');
+    const summaryStart = findRowContains(rows, 'Összefoglaló');
+    const rHitelAll = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+    const rBetetAll = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
+    const rProfit = findRowContains(rows, 'Adózás utáni eredmény', elemStart > -1 ? elemStart : 0);
+
+    for (let ti = 0; ti < TEAMS.length; ti++) {
+      const teamData = { hitel: {}, betet: {}, hitelAll: 0, betetAll: 0, profit: 0 };
+
+      // Összesített mutatók
+      teamData.hitelAll = rHitelAll > -1 ? val(rows, rHitelAll, ti) : 0;
+      teamData.betetAll = rBetetAll > -1 ? val(rows, rBetetAll, ti) : 0;
+      teamData.profit = rProfit > -1 ? val(rows, rProfit, ti) : 0;
+
+      // Hitel döntések
+      let searchFrom = hitelStart > -1 ? hitelStart : 0;
+      for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+        const ht = hitelSearchNames[hi];
+        const htRow = findRowContains(rows, ht, searchFrom);
+        if (htRow < 0) continue;
+        searchFrom = htRow + 1;
+        teamData.hitel[hi] = {};
+        for (let fi = 0; fi < hitelFields.length; fi++) {
+          const r = getFieldInBlock(rows, htRow, hitelFields[fi], 15);
+          teamData.hitel[hi][fi] = r > -1 ? val(rows, r, ti) : null;
+        }
+      }
+
+      // Betét döntések
+      searchFrom = betetStart > -1 ? betetStart : 0;
+      for (let bi = 0; bi < betetSearchNames.length; bi++) {
+        const bt = betetSearchNames[bi];
+        const btRow = findRowContains(rows, bt, searchFrom);
+        if (btRow < 0) continue;
+        searchFrom = btRow + 1;
+        teamData.betet[bi] = {};
+        for (let fi = 0; fi < betetFields.length; fi++) {
+          const r = getFieldInBlock(rows, btRow, betetFields[fi], 15);
+          teamData.betet[bi][fi] = r > -1 ? val(rows, r, ti) : null;
+        }
+      }
+
+      periodData[p][ti] = teamData;
+    }
+  }
+
+  // Compute per-team stats: changes between consecutive periods, min, max for each field
+  // teamStats[ti] = { hitel: {typeIdx: {fieldIdx: {changes:[], allValues:[]}}}, betet: {...}, hitelAllChanges:[], betetAllChanges:[], profitChanges:[], hasAnyChange: bool }
+  const teamStats = {};
+  for (let ti = 0; ti < TEAMS.length; ti++) {
+    const stats = {
+      hitel: {}, betet: {},
+      hitelAllChanges: [], betetAllChanges: [], profitChanges: [],
+      hasAnyChange: false
+    };
+
+    // Init field trackers
+    for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+      stats.hitel[hi] = {};
+      for (let fi = 0; fi < hitelFields.length; fi++) {
+        stats.hitel[hi][fi] = { changes: [], allValues: [] };
+      }
+    }
+    for (let bi = 0; bi < betetSearchNames.length; bi++) {
+      stats.betet[bi] = {};
+      for (let fi = 0; fi < betetFields.length; fi++) {
+        stats.betet[bi][fi] = { changes: [], allValues: [] };
+      }
+    }
+
+    for (let pi = 0; pi < periods.length; pi++) {
+      const p = periods[pi];
+      const d = periodData[p] ? periodData[p][ti] : null;
+      if (!d) continue;
+
+      // Collect all values
+      for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+        for (let fi = 0; fi < hitelFields.length; fi++) {
+          const v = d.hitel[hi] ? d.hitel[hi][fi] : null;
+          if (v !== null && v !== undefined) stats.hitel[hi][fi].allValues.push(v);
+        }
+      }
+      for (let bi = 0; bi < betetSearchNames.length; bi++) {
+        for (let fi = 0; fi < betetFields.length; fi++) {
+          const v = d.betet[bi] ? d.betet[bi][fi] : null;
+          if (v !== null && v !== undefined) stats.betet[bi][fi].allValues.push(v);
+        }
+      }
+
+      // Changes
+      if (pi > 0) {
+        const prevP = periods[pi - 1];
+        const prevD = periodData[prevP] ? periodData[prevP][ti] : null;
+        if (!prevD) continue;
+
+        for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+          for (let fi = 0; fi < hitelFields.length; fi++) {
+            const cur = d.hitel[hi] ? d.hitel[hi][fi] : null;
+            const prev = prevD.hitel[hi] ? prevD.hitel[hi][fi] : null;
+            if (cur !== null && prev !== null) {
+              const ch = cur - prev;
+              stats.hitel[hi][fi].changes.push(ch);
+              if (Math.abs(ch) > 0.001) stats.hasAnyChange = true;
+            }
+          }
+        }
+
+        for (let bi = 0; bi < betetSearchNames.length; bi++) {
+          for (let fi = 0; fi < betetFields.length; fi++) {
+            const cur = d.betet[bi] ? d.betet[bi][fi] : null;
+            const prev = prevD.betet[bi] ? prevD.betet[bi][fi] : null;
+            if (cur !== null && prev !== null) {
+              const ch = cur - prev;
+              stats.betet[bi][fi].changes.push(ch);
+              if (Math.abs(ch) > 0.001) stats.hasAnyChange = true;
+            }
+          }
+        }
+
+        // Aggregated changes
+        if (prevD.hitelAll > 0) stats.hitelAllChanges.push((d.hitelAll - prevD.hitelAll) / prevD.hitelAll * 100);
+        if (prevD.betetAll > 0) stats.betetAllChanges.push((d.betetAll - prevD.betetAll) / prevD.betetAll * 100);
+        if (prevD.profit !== 0) stats.profitChanges.push((d.profit - prevD.profit) / Math.abs(prevD.profit) * 100);
+      }
+    }
+
+    teamStats[ti] = stats;
+  }
+
+  // Helper functions
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const minVal = arr => arr.length ? Math.min(...arr) : null;
+  const maxVal = arr => arr.length ? Math.max(...arr) : null;
+  const fmtChange = (v, isPercent) => {
+    if (v === null || v === undefined || isNaN(v)) return '-';
+    const sign = v > 0.001 ? '+' : '';
+    return isPercent ? sign + v.toFixed(1) + '%' : sign + fmtN(Math.round(v));
+  };
+  const fmtMinMax = (v, isPercent) => {
+    if (v === null || v === undefined || isNaN(v)) return '-';
+    return isPercent ? v.toFixed(1) : fmtN(Math.round(v));
+  };
+
+  // ===== 1. Döntési változások tábla =====
+  let html = '<h4 style="color:#e94560; margin-bottom:8px;">Döntési változások periódusról periódusra</h4>';
+  html += '<div style="overflow-x:auto;"><table>';
+
+  // Header row 1: team names
+  html += '<tr><th rowspan="2" style="min-width:200px;">Mező</th>';
+  TEAMS.forEach((t, i) => {
+    const s = i === JTR ? 'style="background:#f5a623; color:#000; text-align:center;"' : 'style="text-align:center;"';
+    html += `<th colspan="3" ${s}>${t}</th>`;
+  });
+  html += '</tr>';
+
+  // Header row 2: Átl.vált / Min / Max
+  html += '<tr>';
+  TEAMS.forEach((t, i) => {
+    const s = i === JTR ? 'style="background:rgba(245,166,35,0.15);"' : '';
+    html += `<th ${s}>Átl.vált</th><th ${s}>Min</th><th ${s}>Max</th>`;
+  });
+  html += '</tr>';
+
+  // Check if any team has no changes at all
+  const noChangeTeams = new Set();
+  TEAMS.forEach((t, i) => {
+    if (!teamStats[i].hasAnyChange) noChangeTeams.add(i);
+  });
+
+  // Render hitel rows
+  for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+    for (let fi = 0; fi < hitelFields.length; fi++) {
+      const isPercent = hitelFields[fi].includes('%');
+      const isPromo = hitelFields[fi].includes('Promóciós');
+      html += `<tr><td>${hitelTypesDisplay[hi]} — ${hitelFieldsDisplay[fi]}</td>`;
+
+      TEAMS.forEach((t, ti) => {
+        const st = teamStats[ti].hitel[hi][fi];
+        const isJtr = ti === JTR;
+        const baseStyle = isJtr ? 'background:rgba(245,166,35,0.08);' : '';
+
+        if (noChangeTeams.has(ti)) {
+          if (fi === 0 && hi === 0) {
+            html += `<td colspan="3" style="${baseStyle} color:#666; text-align:center;">Nem változtatott</td>`;
+          } else {
+            html += `<td colspan="3" style="${baseStyle} color:#666; text-align:center;">-</td>`;
+          }
+          return;
+        }
+
+        const avgChange = st.changes.length > 0 ? avg(st.changes) : null;
+        const mn = minVal(st.allValues);
+        const mx = maxVal(st.allValues);
+
+        // Color logic: kamat/díj negatív = zöld (agresszív), pozitív = piros
+        // Promónál: pozitív = zöld (több marketing), negatív = piros
+        let changeColor = '#e0e0e0';
+        if (avgChange !== null && Math.abs(avgChange) > 0.001) {
+          if (isPromo) {
+            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+          } else {
+            changeColor = avgChange < 0 ? '#4caf50' : '#e94560';
+          }
+        }
+
+        const jtrBold = isJtr ? 'font-weight:700;' : '';
+        html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
+        html += `<td style="${baseStyle} color:#aaa;">${fmtMinMax(mn, isPercent)}</td>`;
+        html += `<td style="${baseStyle} color:#aaa;">${fmtMinMax(mx, isPercent)}</td>`;
+      });
+      html += '</tr>';
+    }
+  }
+
+  // Separator row
+  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #e94560; padding:2px;"></td></tr>`;
+
+  // Render betét rows
+  for (let bi = 0; bi < betetSearchNames.length; bi++) {
+    for (let fi = 0; fi < betetFields.length; fi++) {
+      const isPercent = betetFields[fi].includes('%');
+      const isPromo = betetFields[fi].includes('Promóciós');
+      html += `<tr><td>${betetTypesDisplay[bi]} — ${betetFieldsDisplay[fi]}</td>`;
+
+      TEAMS.forEach((t, ti) => {
+        const st = teamStats[ti].betet[bi][fi];
+        const isJtr = ti === JTR;
+        const baseStyle = isJtr ? 'background:rgba(245,166,35,0.08);' : '';
+
+        if (noChangeTeams.has(ti)) {
+          html += `<td colspan="3" style="${baseStyle} color:#666; text-align:center;">-</td>`;
+          return;
+        }
+
+        const avgChange = st.changes.length > 0 ? avg(st.changes) : null;
+        const mn = minVal(st.allValues);
+        const mx = maxVal(st.allValues);
+
+        let changeColor = '#e0e0e0';
+        if (avgChange !== null && Math.abs(avgChange) > 0.001) {
+          if (isPromo) {
+            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+          } else {
+            // Betét kamat: emelés (pozitív) = agresszív ügyfélszerzés = zöld, csökkentés = piros
+            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+          }
+        }
+
+        const jtrBold = isJtr ? 'font-weight:700;' : '';
+        html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
+        html += `<td style="${baseStyle} color:#aaa;">${fmtMinMax(mn, isPercent)}</td>`;
+        html += `<td style="${baseStyle} color:#aaa;">${fmtMinMax(mx, isPercent)}</td>`;
+      });
+      html += '</tr>';
+    }
+  }
+
+  // Separator
+  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #e94560; padding:2px;"></td></tr>`;
+
+  // Összesített mutatók
+  const aggRows = [
+    { label: 'Hitelállomány változás (%/periódus)', key: 'hitelAllChanges' },
+    { label: 'Betétállomány változás (%/periódus)', key: 'betetAllChanges' },
+    { label: 'Profit változás (%/periódus)', key: 'profitChanges' },
+  ];
+  for (const ar of aggRows) {
+    html += `<tr><td><strong>${ar.label}</strong></td>`;
+    TEAMS.forEach((t, ti) => {
+      const isJtr = ti === JTR;
+      const baseStyle = isJtr ? 'background:rgba(245,166,35,0.08);' : '';
+      const jtrBold = isJtr ? 'font-weight:700;' : '';
+      const changes = teamStats[ti][ar.key];
+      const avgCh = changes.length > 0 ? avg(changes) : null;
+      let color = '#e0e0e0';
+      if (avgCh !== null && Math.abs(avgCh) > 0.1) {
+        color = avgCh > 0 ? '#4caf50' : '#e94560';
+      }
+      html += `<td colspan="3" style="${baseStyle} color:${color}; ${jtrBold} text-align:center;">${avgCh !== null ? (avgCh > 0 ? '+' : '') + avgCh.toFixed(1) + '%' : '-'}</td>`;
+    });
+    html += '</tr>';
+  }
+
+  html += '</table></div>';
+
+  // ===== 2. Radar chart =====
+  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Stratégiai profil (radar)</h4>';
+  html += '<div style="max-width:700px; margin:0 auto;"><canvas id="viselkedesRadar" height="350"></canvas></div>';
+
+  el.innerHTML = html;
+
+  // Build radar data
+  const radarLabels = [
+    'Átl. hitelkamat csökkentés',
+    'Átl. hitel promó változás',
+    'Hitelállomány növekedés',
+    'Betétállomány változás',
+    'Profit változás'
+  ];
+
+  const radarDatasets = TEAMS.map((name, ti) => {
+    const st = teamStats[ti];
+
+    // 1. Átlagos hitelkamat csökkentés (0-2 skála, negatív változás = pozitív irány)
+    let kamatChanges = [];
+    for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+      const ch = st.hitel[hi][0].changes; // field 0 = Kamat
+      if (ch.length > 0) kamatChanges.push(...ch);
+    }
+    const avgKamatDrop = kamatChanges.length > 0 ? -avg(kamatChanges) : 0;
+    const kamatNorm = Math.max(0, Math.min(avgKamatDrop / 2 * 100, 100)); // 0-2% -> 0-100
+
+    // 2. Átlagos hitel promó változás (0-50k skála)
+    let promoChanges = [];
+    for (let hi = 0; hi < hitelSearchNames.length; hi++) {
+      const ch = st.hitel[hi][1].changes; // field 1 = Promó
+      if (ch.length > 0) promoChanges.push(...ch);
+    }
+    const avgPromoCh = promoChanges.length > 0 ? avg(promoChanges) : 0;
+    const promoNorm = Math.max(0, Math.min(avgPromoCh / 50000 * 100, 100)); // 0-50k -> 0-100
+
+    // 3. Hitelállomány növekedési ütem
+    const hitelGrowth = st.hitelAllChanges.length > 0 ? avg(st.hitelAllChanges) : 0;
+    const hitelNorm = Math.max(0, Math.min((hitelGrowth + 20) / 40 * 100, 100)); // -20..+20% -> 0-100
+
+    // 4. Betétállomány változás
+    const betetGrowth = st.betetAllChanges.length > 0 ? avg(st.betetAllChanges) : 0;
+    const betetNorm = Math.max(0, Math.min((betetGrowth + 20) / 40 * 100, 100));
+
+    // 5. Profit változás
+    const profitGrowth = st.profitChanges.length > 0 ? avg(st.profitChanges) : 0;
+    const profitNorm = Math.max(0, Math.min((profitGrowth + 50) / 100 * 100, 100));
+
+    const isJtr = ti === JTR;
+    return {
+      label: name,
+      data: [kamatNorm, promoNorm, hitelNorm, betetNorm, profitNorm],
+      borderColor: getTeamColorSolid(ti),
+      backgroundColor: isJtr ? 'rgba(245,166,35,0.15)' : getTeamColor(ti),
+      borderWidth: isJtr ? 3 : 1.5,
+      pointRadius: isJtr ? 4 : 2,
+      pointBackgroundColor: getTeamColorSolid(ti),
+    };
+  });
+
+  // Destroy previous chart if exists
+  if (charts['viselkedesRadar']) {
+    charts['viselkedesRadar'].destroy();
+  }
+
+  const radarCanvas = document.getElementById('viselkedesRadar');
+  if (radarCanvas) {
+    charts['viselkedesRadar'] = new Chart(radarCanvas, {
+      type: 'radar',
+      data: {
+        labels: radarLabels,
+        datasets: radarDatasets,
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { color: '#888', backdropColor: 'transparent', stepSize: 25 },
+            grid: { color: 'rgba(255,255,255,0.1)' },
+            angleLines: { color: 'rgba(255,255,255,0.1)' },
+            pointLabels: { color: '#ccc', font: { size: 12 } },
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#eee', font: { size: 12 } },
+            position: 'bottom',
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.label + ': ' + ctx.parsed.r.toFixed(0),
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ===== PANEL 8: RV KALKULÁTOR =====
 function renderCalculator(rows) {
   const summaryStart = findSection(rows, 'Összefoglaló');
   const rRV = findRowContains(rows, 'Részvényárfolyam', summaryStart > -1 ? summaryStart + 5 : 0);
