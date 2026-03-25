@@ -1819,7 +1819,7 @@ function runHRGridSearch() {
   const isLastRound = window._gameInfo && window._gameInfo.isLastRound;
 
   const results = [];
-  const trainingLevels = isLastRound ? [0] : [0, 30, 70];
+  const trainingLevels = isLastRound ? [0, 20, 40] : [0, 20, 30, 40, 50, 60, 70, 100];
 
   for (let w = 450; w <= 1000; w += 50) {
     for (let h = -20; h <= 100; h += 10) {
