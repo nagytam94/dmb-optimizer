@@ -545,20 +545,20 @@ const INFO = {
 
 // ===== TEAM COLORS (palette-based, supports dynamic teams) =====
 const PALETTE = [
-  'rgba(76,175,80,0.8)',   // zöld
-  'rgba(33,150,243,0.8)',  // kék
-  'rgba(245,166,35,0.8)',  // arany (JTR)
-  'rgba(156,39,176,0.8)',  // lila
-  'rgba(255,152,0,0.8)',   // narancs
-  'rgba(0,188,212,0.8)',   // cián
-  'rgba(244,67,54,0.8)',   // piros
-  'rgba(139,195,74,0.8)',  // világoszöld
-  'rgba(121,85,72,0.8)',   // barna
-  'rgba(96,125,139,0.8)',  // szürke
+  'rgba(76,175,80,0.8)',    // 0: zöld
+  'rgba(33,150,243,0.8)',   // 1: kék
+  'rgba(245,166,35,0.8)',   // 2: arany (JTR)
+  'rgba(156,39,176,0.8)',   // 3: lila
+  'rgba(0,188,212,0.8)',    // 4: cián
+  'rgba(244,67,54,0.8)',    // 5: piros
+  'rgba(139,195,74,0.8)',   // 6: világoszöld
+  'rgba(121,85,72,0.8)',    // 7: barna
+  'rgba(233,30,99,0.8)',    // 8: pink
+  'rgba(96,125,139,0.8)',   // 9: szürke
 ];
 const PALETTE_SOLID = [
-  '#4caf50', '#2196f3', '#f5a623', '#9c27b0', '#ff9800',
-  '#00bcd4', '#f44336', '#8bc34a', '#795548', '#607d8b',
+  '#4caf50','#2196f3','#f5a623','#9c27b0','#00bcd4',
+  '#f44336','#8bc34a','#795548','#e91e63','#607d8b'
 ];
 function getTeamColor(i) {
   if (i === JTR) return PALETTE[2]; // arany mindig JTR-nek
@@ -2151,6 +2151,10 @@ function renderEllenfelElemzes(rows) {
   const rBKhitel = findRowContains(rows, 'Bankközi kamatok - hitel');
   const bkHitelKamat = rBKhitel > -1 ? val(rows, rBKhitel, 0) : 3.9;
 
+  // Eredménytartalék RV komponens az Összefoglaló szekcióból (NE keverd a Mérleg Eredménytartalékkal)
+  const summaryStartEF = findRowContains(rows, 'Összefoglaló');
+  const rEredmComp = findRowContains(rows, 'Eredménytartalék', summaryStartEF > -1 ? summaryStartEF : 0);
+
   // Loan type sections
   const hitelStart = findRowContains(rows, 'Hitelek');
   const loanTypes = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
@@ -2168,8 +2172,12 @@ function renderEllenfelElemzes(rows) {
     const betetHitelRatio = hitel > 0 ? (betet / hitel * 100).toFixed(0) : '?';
     const nkbMarzs = hitel > 0 ? (nkb / hitel * 100).toFixed(2) : '?';
     const roa = eszkoz > 0 ? (profit / eszkoz * 100).toFixed(2) : '?';
-    const bkPozicio = hitel + penz - betet; // ha pozitív → bankközi tartozás
-    const sajatToke = eszkoz - betet - Math.max(0, bkPozicio);
+    // Saját tőke becslés: JegyzettTőke(5M) + Eredménytartalék + Profit
+    // Eredménytartalék = RV eredm komponens × 200,000
+    const eredmComp = rEredmComp > -1 ? val(rows, rEredmComp, ti) : 0;
+    const eredmtartReal = eredmComp * 200000;
+    const sajatToke = 5000000 + eredmtartReal + profit;
+    const bkPozicio = eszkoz - betet - sajatToke; // ha pozitív → bankközi tartozás
     const tokemegfeleles = eszkoz > 0 ? (sajatToke / eszkoz * 100).toFixed(1) : '?';
 
     // Per loan type: kamat, promó, piaci részesedés
@@ -2365,13 +2373,12 @@ function renderEllenfelElemzes(rows) {
 
   html += '</table></div>';
 
-  // 3. Piaci részesedés chart (hitel)
-  const chartLabels = loanTypes.map(l => l.replace(' hitel','').replace('kölcsön',''));
-  const chartDatasets = TEAMS.map((name, ti) => {
-    const data = loanTypes.map(lt => {
+  // 3. Piaci részesedés — Hitelek (mini doughnut-ok)
+  // Előre kiszámoljuk a százalékokat hiteltípusonként
+  const hitelPieData = loanTypes.map(lt => {
+    return TEAMS.map((_, ti) => {
       const d = teamMetrics[ti].loanData[lt];
       const allomany = d ? (d.allomany || 0) : 0;
-      // Total for this loan type
       let total = 0;
       TEAMS.forEach((_, j) => {
         const dd = teamMetrics[j].loanData[lt];
@@ -2379,22 +2386,20 @@ function renderEllenfelElemzes(rows) {
       });
       return total > 0 ? Math.round(allomany / total * 100) : 0;
     });
-    return {
-      label: name,
-      data,
-      backgroundColor: getTeamColor(ti),
-      borderColor: getTeamColorSolid(ti),
-      borderWidth: ti === JTR ? 2 : 1,
-    };
   });
 
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés (hiteltípusonként, %)</h4>';
-  html += '<canvas id="piaciReszChart" height="80"></canvas>';
+  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés — Hitelek</h4>';
+  html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px;">';
+  loanTypes.forEach((lt, ltIdx) => {
+    const canvasId = 'pieHitel_' + ltIdx;
+    const label = lt.replace(' hitel','').replace('kölcsön','').trim();
+    html += `<div style="text-align:center;"><div style="font-size:12px; color:#aaa; margin-bottom:4px;">${label}</div><canvas id="${canvasId}" width="120" height="120"></canvas></div>`;
+  });
+  html += '</div>';
 
-  // 4. Betéti piaci részesedés chart
-  const depChartLabels = depTypes.map(d => d.replace(' betét','').replace(' betétek','').replace('pénztári',''));
-  const depChartDatasets = TEAMS.map((name, ti) => {
-    const data = depTypes.map(dt => {
+  // 4. Piaci részesedés — Betétek (mini doughnut-ok)
+  const depPieData = depTypes.map(dt => {
+    return TEAMS.map((_, ti) => {
       const d = teamMetrics[ti].depData[dt];
       const allomany = d ? (d.allomany || 0) : 0;
       let total = 0;
@@ -2404,52 +2409,59 @@ function renderEllenfelElemzes(rows) {
       });
       return total > 0 ? Math.round(allomany / total * 100) : 0;
     });
-    return {
-      label: name,
-      data,
-      backgroundColor: getTeamColor(ti),
-      borderColor: getTeamColorSolid(ti),
-      borderWidth: ti === JTR ? 2 : 1,
-    };
   });
 
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés (betéttípusonként, %)</h4>';
-  html += '<canvas id="piaciReszDepChart" height="80"></canvas>';
+  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés — Betétek</h4>';
+  html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">';
+  depTypes.forEach((dt, dtIdx) => {
+    const canvasId = 'pieBetet_' + dtIdx;
+    const label = dt.replace(' betét','').replace(' betétek','').replace('pénztári','').trim();
+    html += `<div style="text-align:center;"><div style="font-size:12px; color:#aaa; margin-bottom:4px;">${label}</div><canvas id="${canvasId}" width="120" height="120"></canvas></div>`;
+  });
+  html += '</div>';
 
   el.innerHTML = html;
 
-  // Render hitel chart
-  new Chart(document.getElementById('piaciReszChart'), {
-    type: 'bar',
-    data: { labels: chartLabels, datasets: chartDatasets },
-    options: {
-      responsive: true,
-      scales: {
-        x: { stacked: true, ticks: { color: '#aaa' }, grid: { color: '#333' } },
-        y: { stacked: true, max: 100, ticks: { color: '#aaa', callback: v => v + '%' }, grid: { color: '#333' } },
+  // Render hitel doughnut-ok
+  loanTypes.forEach((lt, ltIdx) => {
+    const canvas = document.getElementById('pieHitel_' + ltIdx);
+    if (!canvas) return;
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: TEAMS,
+        datasets: [{ data: hitelPieData[ltIdx], backgroundColor: TEAMS.map((_, i) => getTeamColor(i)), borderWidth: 0 }]
       },
-      plugins: {
-        legend: { labels: { color: '#eee' } },
-        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+      options: {
+        responsive: false,
+        cutout: '45%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + '%' } }
+        }
       }
-    }
+    });
   });
 
-  // Render betét chart
-  new Chart(document.getElementById('piaciReszDepChart'), {
-    type: 'bar',
-    data: { labels: depChartLabels, datasets: depChartDatasets },
-    options: {
-      responsive: true,
-      scales: {
-        x: { stacked: true, ticks: { color: '#aaa' }, grid: { color: '#333' } },
-        y: { stacked: true, max: 100, ticks: { color: '#aaa', callback: v => v + '%' }, grid: { color: '#333' } },
+  // Render betét doughnut-ok
+  depTypes.forEach((dt, dtIdx) => {
+    const canvas = document.getElementById('pieBetet_' + dtIdx);
+    if (!canvas) return;
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: TEAMS,
+        datasets: [{ data: depPieData[dtIdx], backgroundColor: TEAMS.map((_, i) => getTeamColor(i)), borderWidth: 0 }]
       },
-      plugins: {
-        legend: { labels: { color: '#eee' } },
-        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+      options: {
+        responsive: false,
+        cutout: '45%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + '%' } }
+        }
       }
-    }
+    });
   });
 }
 
