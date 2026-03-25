@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMB 2026 — HR Optimalizator</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#eee;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6}
+a{color:#e94560;text-decoration:none}
+a:hover{text-decoration:underline}
+
+.container{max-width:1400px;margin:0 auto;padding:20px}
+
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:2px solid #e94560;margin-bottom:30px}
+header h1{font-size:1.8rem;color:#e94560}
+header a{font-size:0.95rem}
+
+.panel{background:#16213e;border-radius:12px;padding:24px;margin-bottom:24px;border:1px solid #0f3460}
+.panel h2{color:#e94560;margin-bottom:16px;font-size:1.3rem}
+
+/* Base params */
+.base-params{display:flex;gap:24px;flex-wrap:wrap}
+.base-params label{display:flex;flex-direction:column;gap:4px;font-size:0.9rem;color:#aaa}
+.base-params input{background:#1a1a2e;border:1px solid #0f3460;color:#eee;padding:8px 12px;border-radius:6px;width:150px;font-size:1rem}
+
+/* Slider group */
+.slider-group{margin-bottom:20px}
+.slider-group label{display:block;font-size:0.95rem;margin-bottom:6px;color:#ccc}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;accent-color:#e94560;height:6px}
+.slider-row input[type=number]{background:#1a1a2e;border:1px solid #0f3460;color:#eee;padding:6px 10px;border-radius:6px;width:90px;font-size:1rem;text-align:center}
+
+/* Results */
+.results-summary{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px;font-size:1.1rem}
+.results-summary span{padding:6px 14px;background:#1a1a2e;border-radius:8px}
+
+.cost-table{width:100%;border-collapse:collapse;text-align:center}
+.cost-table th,.cost-table td{padding:12px 8px;border:1px solid #0f3460}
+.cost-table th{background:#0f3460;color:#e94560;font-weight:600}
+.cost-table td{background:#1a1a2e;font-size:1.15rem;font-weight:700}
+.cost-table td.total{color:#e94560;font-size:1.3rem}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.chart-box{background:#16213e;border-radius:12px;padding:16px;border:1px solid #0f3460}
+.chart-box h3{color:#e94560;font-size:1rem;margin-bottom:8px;text-align:center}
+
+/* Optimize button */
+.btn-optimize{display:inline-block;background:#e94560;color:#fff;border:none;padding:14px 32px;font-size:1.1rem;border-radius:8px;cursor:pointer;font-weight:700;transition:background .2s}
+.btn-optimize:hover{background:#c73652}
+
+/* Optimization results table */
+.opt-table{width:100%;border-collapse:collapse;margin-top:16px;font-size:0.9rem}
+.opt-table th,.opt-table td{padding:8px 6px;border:1px solid #0f3460;text-align:center}
+.opt-table th{background:#0f3460;color:#e94560;font-size:0.8rem;position:sticky;top:0}
+.opt-table td{background:#1a1a2e}
+.opt-table tr:first-child td{background:#1a2a4e;font-weight:700}
+
+/* Formulas */
+.formula-list{list-style:none}
+.formula-list li{padding:10px 14px;margin-bottom:8px;background:#1a1a2e;border-radius:8px;font-family:'Courier New',monospace;font-size:0.9rem;border-left:3px solid #e94560}
+
+/* Data table */
+.data-tables{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.data-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.data-table th,.data-table td{padding:6px 8px;border:1px solid #0f3460;text-align:center}
+.data-table th{background:#0f3460;color:#e94560}
+.data-table td{background:#1a1a2e}
+
+/* Info tooltip */
+.info-btn{display:inline-block;width:20px;height:20px;border-radius:50%;background:#e94560;color:#fff;text-align:center;line-height:20px;font-size:0.75rem;cursor:help;margin-left:6px;font-style:normal}
+
+@media(max-width:900px){
+  .charts-row{grid-template-columns:1fr}
+  .data-tables{grid-template-columns:1fr}
+  .results-summary{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<header>
+  <h1>DMB 2026 — HR Optimalizator</h1>
+  <a href="https://nagytam94.github.io/dmb-optimizer/analyzer.html">&larr; Vissza a Dashboardhoz</a>
+</header>
+
+<!-- 2. Base params -->
+<div class="panel">
+  <h2>Alapparameterek</h2>
+  <div class="base-params">
+    <label>Letszam (periodus elejen)
+      <input type="number" id="baseLetszam" value="347" min="1" max="2000">
+    </label>
+    <label>Piaci atlagber
+      <input type="number" id="marketAvg" value="930" min="100" max="3000">
+    </label>
+  </div>
+</div>
+
+<!-- 3. Simulator -->
+<div class="panel">
+  <h2>Interaktiv Szimulator</h2>
+
+  <div class="slider-group">
+    <label>Ber / fo</label>
+    <div class="slider-row">
+      <input type="range" id="wageSlider" min="450" max="1500" step="10" value="600">
+      <input type="number" id="wageNum" min="450" max="1500" step="10" value="600">
+    </div>
+  </div>
+
+  <div class="slider-group">
+    <label>Felvetel / Elbocsatas</label>
+    <div class="slider-row">
+      <input type="range" id="hireSlider" min="-50" max="200" step="1" value="0">
+      <input type="number" id="hireNum" min="-50" max="200" step="1" value="0">
+    </div>
+  </div>
+
+  <div class="slider-group">
+    <label>Kepzesi koltseg / fo</label>
+    <div class="slider-row">
+      <input type="range" id="trainSlider" min="0" max="200" step="5" value="70">
+      <input type="number" id="trainNum" min="0" max="200" step="5" value="70">
+    </div>
+  </div>
+
+  <div class="results-summary" id="resultsSummary"></div>
+
+  <table class="cost-table">
+    <thead><tr>
+      <th>Szemelyi ktg</th><th>Kepzesi ktg</th><th>Felveteli ktg</th><th>Tulora ktg</th><th>OSSZESEN</th>
+    </tr></thead>
+    <tbody><tr id="costRow">
+      <td>-</td><td>-</td><td>-</td><td>-</td><td class="total">-</td>
+    </tr></tbody>
+  </table>
+</div>
+
+<!-- 4. Charts -->
+<div class="charts-row">
+  <div class="chart-box">
+    <h3>Ber &rarr; Fluktuacio</h3>
+    <canvas id="chartFluk"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>Kepzes &rarr; Kihasznaltsag</h3>
+    <canvas id="chartKihaszn"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>Kepzes &rarr; Osszkoltseg (U-gorbe)</h3>
+    <canvas id="chartUCurve"></canvas>
+  </div>
+</div>
+
+<!-- 5. Optimizer -->
+<div class="panel" style="margin-top:24px">
+  <h2>Optimalis Kereses</h2>
+  <p style="color:#aaa;margin-bottom:12px">Grid search: ber, felvetel, kepzes kombinaciok &mdash; kihasznaltsag 85-98% kozott, osszkoltseg szerint rendezve.</p>
+  <button class="btn-optimize" onclick="runOptimize()">Optimalizalas inditasa</button>
+  <div id="optResults"></div>
+</div>
+
+<!-- 6. Formulas -->
+<div class="panel">
+  <h2>Visszafejtett Kepletek</h2>
+  <ul class="formula-list">
+    <li>Fluktuacio = -34.42 &times; (Piaci atlagber / Sajat ber)<sup>1.525</sup> <i class="info-btn" title="R&sup2; &asymp; 0.999 &mdash; 8 mert adatpontra illesztett hatvanyfuggveny">i</i></li>
+    <li>Letszam vegen = Letszam elejen + Felvetel + Fluktuacio</li>
+    <li>Kihasznaltsag% = 103.82 - 12.796 &times; ln(Kepzes + 1) + 12337 / Letszam <i class="info-btn" title="RMSE < 0.84% &mdash; logaritmikus regresszio">i</i></li>
+    <li>Szemelyi ktg = Letszam &times; Ber</li>
+    <li>Kepzesi ktg = Letszam &times; Kepzes</li>
+    <li>Felveteli ktg = |Felvetel| &times; 200</li>
+    <li>Tulora (ha kihaszn &gt; 100%) = Letszam &times; Ber &times; (kihaszn - 100) / 100 &times; 3.5 <i class="info-btn" title="3.5x szorzo a rendes berre vetitve">i</i></li>
+  </ul>
+</div>
+
+<!-- 7. Data tables -->
+<div class="panel">
+  <h2>Mert Adatpontok</h2>
+  <div class="data-tables">
+    <div>
+      <h3 style="color:#e94560;margin-bottom:8px">Ber tesztek (fluktuacio)</h3>
+      <table class="data-table">
+        <thead><tr><th>Ber</th><th>Mert fluktuacio</th><th>Modell</th></tr></thead>
+        <tbody id="wageDataBody"></tbody>
+      </table>
+    </div>
+    <div>
+      <h3 style="color:#e94560;margin-bottom:8px">Kepzes tesztek (kihasznaltsag)</h3>
+      <table class="data-table">
+        <thead><tr><th>Kepzes</th><th>Mert %</th><th>Modell %</th></tr></thead>
+        <tbody id="trainDataBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// === CORE FORMULAS ===
+function calcFluk(wage, marketAvg) {
+  marketAvg = marketAvg || 930;
+  return -Math.round(34.42 * Math.pow(marketAvg / wage, 1.525));
+}
+
+function calcKihaszn(letszam, training) {
+  return 103.82 - 12.796 * Math.log(training + 1) + 12337 / letszam;
+}
+
+function calcLetszam(letszamStart, hire, wage, marketAvg) {
+  const fluk = calcFluk(wage, marketAvg);
+  return Math.max(0, letszamStart + hire + fluk);
+}
+
+function calcCosts(wage, hire, training, letszamStart, marketAvg) {
+  const fluk = calcFluk(wage, marketAvg);
+  const letszam = Math.max(1, letszamStart + hire + fluk);
+  const kihaszn = calcKihaszn(letszam, training);
+  const szemKtg = letszam * wage;
+  const kepzKtg = letszam * training;
+  const felvKtg = Math.abs(hire) * 200;
+  const tulora = kihaszn > 100 ? letszam * wage * ((kihaszn - 100) / 100) * 3.5 : 0;
+  const osszKtg = szemKtg + kepzKtg + felvKtg + tulora;
+  return { wage, hire, training, fluk, letszam, kihaszn, szemKtg, kepzKtg, felvKtg, tulora, osszKtg };
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('hu-HU'); }
+
+// === SLIDER SYNC ===
+function syncSlider(sliderId, numId) {
+  const s = document.getElementById(sliderId);
+  const n = document.getElementById(numId);
+  s.addEventListener('input', () => { n.value = s.value; update(); });
+  n.addEventListener('input', () => { s.value = n.value; update(); });
+}
+syncSlider('wageSlider', 'wageNum');
+syncSlider('hireSlider', 'hireNum');
+syncSlider('trainSlider', 'trainNum');
+document.getElementById('baseLetszam').addEventListener('input', () => { update(); updateCharts(); });
+document.getElementById('marketAvg').addEventListener('input', () => { update(); updateCharts(); });
+
+// === UPDATE RESULTS ===
+function kihasznColor(k) {
+  if (k < 85) return { color: '#2196f3', label: 'Alacsony — felesleges kapacitas' };
+  if (k <= 95) return { color: '#4caf50', label: 'Optimalis' };
+  if (k <= 100) return { color: '#f5a623', label: 'Szoros — kockazatos' };
+  return { color: '#e94560', label: 'TULORA! Extra koltseg' };
+}
+
+function update() {
+  const wage = +document.getElementById('wageNum').value;
+  const hire = +document.getElementById('hireNum').value;
+  const train = +document.getElementById('trainNum').value;
+  const base = +document.getElementById('baseLetszam').value;
+  const mkt = +document.getElementById('marketAvg').value;
+
+  const r = calcCosts(wage, hire, train, base, mkt);
+  const kc = kihasznColor(r.kihaszn);
+
+  document.getElementById('resultsSummary').innerHTML =
+    `<span>Fluktuacio: <b>${r.fluk}</b></span>` +
+    `<span>Letszam vegen: <b>${Math.round(r.letszam)}</b></span>` +
+    `<span style="border:2px solid ${kc.color};color:${kc.color}">Kihasznaltsag: <b>${r.kihaszn.toFixed(1)}%</b> — ${kc.label}</span>`;
+
+  const cells = document.getElementById('costRow').children;
+  cells[0].textContent = fmt(r.szemKtg);
+  cells[1].textContent = fmt(r.kepzKtg);
+  cells[2].textContent = fmt(r.felvKtg);
+  cells[3].textContent = fmt(r.tulora);
+  cells[3].style.color = r.tulora > 0 ? '#e94560' : '#eee';
+  cells[4].textContent = fmt(r.osszKtg);
+}
+
+// === CHARTS ===
+Chart.defaults.color = '#aaa';
+Chart.defaults.borderColor = '#0f3460';
+
+// Chart 1: Wage -> Fluctuation
+const measuredFluk = [[450,104],[500,89],[550,77],[600,67],[650,59],[700,53],[800,43],[930,35]];
+const modelFlukData = [];
+for (let w = 450; w <= 1500; w += 10) {
+  modelFlukData.push({ x: w, y: 34.42 * Math.pow(930 / w, 1.525) });
+}
+
+const chartFluk = new Chart(document.getElementById('chartFluk'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Mert adatpontok',
+        data: measuredFluk.map(d => ({ x: d[0], y: d[1] })),
+        backgroundColor: '#e94560',
+        pointRadius: 6,
+        order: 1
+      },
+      {
+        label: 'Modell: 34.42 x (930/ber)^1.525',
+        data: modelFlukData,
+        type: 'line',
+        borderColor: '#4caf50',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        order: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { font: { size: 10 } } }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Ber / fo' } },
+      y: { title: { display: true, text: '|Fluktuacio|' } }
+    }
+  }
+});
+
+// Chart 2: Training -> Utilization
+const measuredKihaszn = [
+  [55,96.43],[56,96.18],[57,95.94],[58,95.70],[59,95.47],[60,95.25],[61,95.04],
+  [62,94.83],[63,94.62],[64,94.43],[65,94.24],[66,94.05],[67,93.87],[68,93.69],
+  [69,93.52],[70,93.36],[73,92.88]
+];
+
+function getModelLetszam() {
+  const base = +document.getElementById('baseLetszam').value;
+  const hire = +document.getElementById('hireNum').value;
+  const wage = +document.getElementById('wageNum').value;
+  const mkt = +document.getElementById('marketAvg').value;
+  return calcLetszam(base, hire, wage, mkt);
+}
+
+function buildKihasznModel(letszam) {
+  const data = [];
+  for (let t = 0; t <= 200; t += 2) {
+    data.push({ x: t, y: calcKihaszn(letszam || 280, t) });
+  }
+  return data;
+}
+
+const chartKihaszn = new Chart(document.getElementById('chartKihaszn'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Mert adatpontok',
+        data: measuredKihaszn.map(d => ({ x: d[0], y: d[1] })),
+        backgroundColor: '#e94560',
+        pointRadius: 5,
+        order: 1
+      },
+      {
+        label: 'Modell',
+        data: buildKihasznModel(280),
+        type: 'line',
+        borderColor: '#4caf50',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        order: 2
+      },
+      {
+        label: '100% hatar',
+        data: [{ x: 0, y: 100 }, { x: 200, y: 100 }],
+        type: 'line',
+        borderColor: '#e94560',
+        borderWidth: 2,
+        borderDash: [8, 4],
+        pointRadius: 0,
+        fill: false,
+        order: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { font: { size: 10 } } } },
+    scales: {
+      x: { title: { display: true, text: 'Kepzesi ktg / fo' } },
+      y: { title: { display: true, text: 'Kihasznaltsag %' }, min: 80, max: 120 }
+    }
+  }
+});
+
+// Chart 3: U-curve (training vs total cost)
+function buildUCurveData() {
+  const base = +document.getElementById('baseLetszam').value;
+  const wage = +document.getElementById('wageNum').value;
+  const hire = +document.getElementById('hireNum').value;
+  const mkt = +document.getElementById('marketAvg').value;
+
+  const costs = [], bgs = [];
+  let minCost = Infinity, minTrain = 0;
+  for (let t = 0; t <= 200; t += 2) {
+    const r = calcCosts(wage, hire, t, base, mkt);
+    costs.push({ x: t, y: r.osszKtg });
+    bgs.push(r.kihaszn > 100 ? 'rgba(233,69,96,0.15)' : 'transparent');
+    if (r.osszKtg < minCost) { minCost = r.osszKtg; minTrain = t; }
+  }
+  return { costs, bgs, minCost, minTrain };
+}
+
+let uData = buildUCurveData();
+const chartUCurve = new Chart(document.getElementById('chartUCurve'), {
+  type: 'line',
+  data: {
+    datasets: [
+      {
+        label: 'Osszkoltseg',
+        data: uData.costs,
+        borderColor: '#e94560',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: {
+          target: 'origin',
+          above: 'rgba(233,69,96,0.05)'
+        }
+      },
+      {
+        label: `Optimum: kepzes=${uData.minTrain}`,
+        data: [{ x: uData.minTrain, y: uData.minCost }],
+        backgroundColor: '#4caf50',
+        borderColor: '#4caf50',
+        pointRadius: 8,
+        pointStyle: 'star',
+        type: 'scatter'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { font: { size: 10 } } },
+      annotation: undefined
+    },
+    scales: {
+      x: { type: 'linear', title: { display: true, text: 'Kepzesi ktg / fo' } },
+      y: { title: { display: true, text: 'Osszkoltseg' } }
+    }
+  }
+});
+
+// Background plugin for overtime zone
+const overtimePlugin = {
+  id: 'overtimeBg',
+  beforeDraw(chart) {
+    if (chart.canvas.id !== 'chartUCurve') return;
+    const base = +document.getElementById('baseLetszam').value;
+    const wage = +document.getElementById('wageNum').value;
+    const hire = +document.getElementById('hireNum').value;
+    const mkt = +document.getElementById('marketAvg').value;
+
+    // Find threshold training where kihaszn = 100
+    const fluk = calcFluk(wage, mkt);
+    const letszam = Math.max(1, base + hire + fluk);
+    // 103.82 - 12.796*ln(t+1) + 12337/letszam = 100
+    // ln(t+1) = (103.82 + 12337/letszam - 100) / 12.796
+    const lnVal = (103.82 + 12337 / letszam - 100) / 12.796;
+    const threshold = Math.exp(lnVal) - 1;
+
+    if (threshold > 0 && threshold < 200) {
+      const { ctx } = chart;
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+      const x0 = xScale.left;
+      const xT = xScale.getPixelForValue(threshold);
+      ctx.save();
+      ctx.fillStyle = 'rgba(233,69,96,0.1)';
+      ctx.fillRect(x0, yScale.top, xT - x0, yScale.bottom - yScale.top);
+      ctx.fillStyle = '#e94560';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('TULORA ZONA', x0 + 4, yScale.top + 14);
+      ctx.restore();
+    }
+  }
+};
+Chart.register(overtimePlugin);
+
+function updateCharts() {
+  // Update utilization chart model line
+  const letszam = getModelLetszam() || 280;
+  chartKihaszn.data.datasets[1].data = buildKihasznModel(letszam);
+  chartKihaszn.update();
+
+  // Update U-curve
+  const ud = buildUCurveData();
+  chartUCurve.data.datasets[0].data = ud.costs;
+  chartUCurve.data.datasets[1].data = [{ x: ud.minTrain, y: ud.minCost }];
+  chartUCurve.data.datasets[1].label = `Optimum: kepzes=${ud.minTrain}, ktg=${fmt(ud.minCost)}`;
+  chartUCurve.update();
+}
+
+// Re-attach update to sliders
+['wageSlider','wageNum','hireSlider','hireNum','trainSlider','trainNum'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateCharts);
+});
+
+// === OPTIMIZER ===
+function runOptimize() {
+  const base = +document.getElementById('baseLetszam').value;
+  const mkt = +document.getElementById('marketAvg').value;
+
+  const wages = [];
+  for (let w = 450; w <= 1000; w += 50) wages.push(w);
+  const hires = [-10, 0, 10, 20, 30, 50, 80, 100];
+  const trains = [0, 10, 20, 30, 40, 50, 60, 70, 80, 100];
+
+  const results = [];
+  for (const w of wages) {
+    for (const h of hires) {
+      for (const t of trains) {
+        const r = calcCosts(w, h, t, base, mkt);
+        if (r.kihaszn >= 85 && r.kihaszn <= 98) {
+          results.push(r);
+        }
+      }
+    }
+  }
+
+  results.sort((a, b) => a.osszKtg - b.osszKtg);
+  const top = results.slice(0, 15);
+
+  let html = '<table class="opt-table"><thead><tr>' +
+    '<th>#</th><th>Ber</th><th>Felvetel</th><th>Kepzes</th><th>Fluk</th><th>Letszam</th><th>Kihaszn%</th>' +
+    '<th>Szem.ktg</th><th>Kepz.ktg</th><th>Felv.ktg</th><th>Tulora</th><th>OSSZ</th></tr></thead><tbody>';
+
+  top.forEach((r, i) => {
+    html += `<tr>
+      <td>${i + 1}</td><td>${r.wage}</td><td>${r.hire}</td><td>${r.training}</td>
+      <td>${r.fluk}</td><td>${Math.round(r.letszam)}</td><td>${r.kihaszn.toFixed(1)}%</td>
+      <td>${fmt(r.szemKtg)}</td><td>${fmt(r.kepzKtg)}</td><td>${fmt(r.felvKtg)}</td>
+      <td>${fmt(r.tulora)}</td><td style="color:#e94560;font-weight:700">${fmt(r.osszKtg)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  if (top.length === 0) html = '<p style="color:#f5a623;margin-top:12px">Nincs talalat a megadott feltetelekkel.</p>';
+
+  document.getElementById('optResults').innerHTML = html;
+}
+
+// === DATA TABLES ===
+function populateDataTables() {
+  // Wage data
+  const wageData = [[450,104],[500,89],[550,77],[600,67],[650,59],[700,53],[800,43],[930,35]];
+  let wh = '';
+  wageData.forEach(d => {
+    const model = Math.round(34.42 * Math.pow(930 / d[0], 1.525));
+    wh += `<tr><td>${d[0]}</td><td>${d[1]}</td><td>${model}</td></tr>`;
+  });
+  document.getElementById('wageDataBody').innerHTML = wh;
+
+  // Training data
+  let th = '';
+  measuredKihaszn.forEach(d => {
+    const model = calcKihaszn(280, d[0]).toFixed(2);
+    th += `<tr><td>${d[0]}</td><td>${d[1]}</td><td>${model}</td></tr>`;
+  });
+  document.getElementById('trainDataBody').innerHTML = th;
+}
+
+// Init
+update();
+updateCharts();
+populateDataTables();
+</script>
+</body>
+</html>
