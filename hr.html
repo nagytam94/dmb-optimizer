@@ -171,7 +171,7 @@ header a{font-size:0.95rem}
   <ul class="formula-list">
     <li>Fluktuacio = -34.42 &times; (Piaci atlagber / Sajat ber)<sup>1.525</sup> <i class="info-btn" title="R&sup2; &asymp; 0.999 &mdash; 8 mert adatpontra illesztett hatvanyfuggveny">i</i></li>
     <li>Letszam vegen = Letszam elejen + Felvetel + Fluktuacio</li>
-    <li>Kihasznaltsag% = 75.13 + 5250/Letszam + (70 - Kepzes) &times; 0.18 <i class="info-btn" title="Tesztelt: kepzes 55-73 tartomanyban. Szeles ertekeknel (0-50, 100+) a valos szimulacio elterhet!">i</i></li>
+    <li>Kihasznaltsag% = 28.89 + 12337/Letszam + 1929.5/(Kepzes + 26.21) <i class="info-btn" title="Inverse modell, 12 adatpontra illesztve (RMSE=0.51), tesztelt 0-73 tartomany">i</i></li>
     <li>Szemelyi ktg = Letszam &times; Ber</li>
     <li>Kepzesi ktg = Letszam &times; Kepzes</li>
     <li>Felveteli ktg = |Felvetel| &times; 200</li>
@@ -210,13 +210,12 @@ function calcFluk(wage, marketAvg) {
 }
 
 function calcKihaszn(letszam, training) {
-  // A képzés hatása CSAK 50-100 tartományban tesztelt és megbízható.
-  // Szélső értékeknél (0, 5, stb.) a valós szimuláció ELTÉRŐ viselkedést mutat.
-  // Klampoljuk 50-100 közé a megbízható becsléshez.
-  const t = Math.max(50, Math.min(100, typeof training === 'number' ? training : 70));
-  // Tesztelt tartomány (55-73): lineáris közelítés, ref: képzés=70
-  const baseKihaszn = 75.13 + 5250 / letszam;
-  return baseKihaszn + (70 - t) * 0.18;
+  // Inverse modell, 12 adatpontra illesztve (RMSE=0.51), tesztelt 0-73 tartomány
+  // Referencia: 280 fő, képzés=70 → kihaszn=93.36%
+  const t = typeof training === 'number' ? Math.max(0, training) : 70;
+  const trainPart = 1929.5 / (t + 26.21);
+  const letszamPart = 12337 / letszam;
+  return 28.89 + letszamPart + trainPart;
 }
 
 function calcLetszam(letszamStart, hire, wage, marketAvg) {

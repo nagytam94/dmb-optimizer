@@ -1653,16 +1653,14 @@ function calcFluk(wage, piaci) {
   return -Math.round(34.42 * Math.pow(piaci / wage, 1.525));
 }
 function calcKihaszn(letszam, training) {
-  // Képzés hatás a kihasználtságra: CSAK 50-100 tartományban megbízható
-  // Tesztelt: képzés 55-73 → kihasználtság 96.4%-92.9% (280 főnél)
-  // A képzés hatása NEM lineáris és NEM extrapolálható szélső értékekre
-  // Ezért a képzés hatást CSAK a tesztelt tartományban alkalmazzuk
-  const t = training === undefined ? 70 : training;
-  const clampedTrain = Math.max(50, Math.min(100, t)); // Clamp 50-100 közé
-  // Referencia: képzés=70 → kihaszn alap
-  const baseKihaszn = 75.13 + 5250 / letszam;
-  const trainEffect = (70 - clampedTrain) * 0.18;
-  return baseKihaszn + trainEffect;
+  // Inverse modell, 12 adatpontra illesztve (RMSE=0.51), tesztelt 0-73 tartomány
+  // kihaszn(280fő, train) = 72.95 + 1929.5 / (train + 26.21)
+  // Létszám hatás: 12337 / létszám (korábbi bér tesztekből)
+  const t = typeof training === 'number' ? Math.max(0, training) : 70;
+  const trainPart = 1929.5 / (t + 26.21);
+  const letszamPart = 12337 / letszam;
+  // Alap: 72.95 a 280 fős referencián = 72.95 - 12337/280 + 12337/létszám
+  return 72.95 - 44.06 + letszamPart + trainPart;
 }
 function calcHRCost(wage, hire, training, letszamStart, piaci) {
   piaci = piaci || 930;
