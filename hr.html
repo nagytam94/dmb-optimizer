@@ -213,7 +213,7 @@ function calcKihaszn(letszam, training) {
   // A képzés hatása CSAK 50-100 tartományban tesztelt és megbízható.
   // Szélső értékeknél (0, 5, stb.) a valós szimuláció ELTÉRŐ viselkedést mutat.
   // Klampoljuk 50-100 közé a megbízható becsléshez.
-  const t = Math.max(50, Math.min(100, training || 70));
+  const t = Math.max(50, Math.min(100, typeof training === 'number' ? training : 70));
   // Tesztelt tartomány (55-73): lineáris közelítés, ref: képzés=70
   const baseKihaszn = 75.13 + 5250 / letszam;
   return baseKihaszn + (70 - t) * 0.18;
