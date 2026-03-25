@@ -1116,7 +1116,7 @@ function renderHitelPortfolio(rows) {
   const datasets = TEAMS.map((t, i) => ({
     label: t,
     data: teamAllomanyData[i],
-    backgroundColor: TEAM_COLORS_ALPHA[t],
+    backgroundColor: getTeamColor(i),
     borderColor: i === JTR ? '#f5a623' : 'transparent',
     borderWidth: i === JTR ? 3 : 0
   }));
@@ -1372,7 +1372,7 @@ function renderBetetForras(rows) {
   const betetDatasets = TEAMS.map((t, i) => ({
     label: t,
     data: teamBetetData[i],
-    backgroundColor: TEAM_COLORS_ALPHA[t],
+    backgroundColor: getTeamColor(i),
     borderColor: i === JTR ? '#f5a623' : 'transparent',
     borderWidth: i === JTR ? 3 : 0
   }));
@@ -1953,8 +1953,8 @@ function renderEllenfelElemzes(rows) {
     return {
       label: name,
       data,
-      backgroundColor: ti === JTR ? 'rgba(245,166,35,0.8)' : TEAM_COLORS_ALPHA[ti],
-      borderColor: ti === JTR ? '#f5a623' : TEAM_COLORS[ti],
+      backgroundColor: getTeamColor(ti),
+      borderColor: getTeamColorSolid(ti),
       borderWidth: ti === JTR ? 2 : 1,
     };
   });
@@ -1978,8 +1978,8 @@ function renderEllenfelElemzes(rows) {
     return {
       label: name,
       data,
-      backgroundColor: ti === JTR ? 'rgba(245,166,35,0.8)' : TEAM_COLORS_ALPHA[ti],
-      borderColor: ti === JTR ? '#f5a623' : TEAM_COLORS[ti],
+      backgroundColor: getTeamColor(ti),
+      borderColor: getTeamColorSolid(ti),
       borderWidth: ti === JTR ? 2 : 1,
     };
   });
