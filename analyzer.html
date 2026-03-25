@@ -457,10 +457,12 @@ button:hover { background: #c73850; }
       <div id="decisionContent"></div>
     </div>
 
-    <!-- Panel 6: HR Optimalizátor -->
-    <div class="panel full" id="panelHR">
-      <h3>HR Optimalizátor</h3>
-      <div id="hrContent"></div>
+    <!-- HR Optimalizátor → külön oldal: hr.html -->
+
+    <!-- Panel 6: Ellenfél Elemzés -->
+    <div class="panel full" id="panelEllenfel">
+      <h3>Ellenfél Elemzés</h3>
+      <div id="ellenfelContent"></div>
     </div>
 
     <!-- Panel 7: RV Kalkulator -->
@@ -745,7 +747,7 @@ function renderAll() {
   renderHitelBetetArany(rows);
   renderBetetForras(rows);
   renderDecisionAnalysis(rows);
-  renderHROptimizer(rows);
+  renderEllenfelElemzes(rows);
   renderCalculator(rows);
 }
 
@@ -1682,118 +1684,214 @@ function kihasznColor(k) {
   return '#2196f3';
 }
 
-// ===== PANEL 6: HR OPTIMALIZÁTOR =====
-function renderHROptimizer(rows) {
-  const isLastRound = window._gameInfo && window._gameInfo.isLastRound;
-  const piaciAtlag = 930;
+// ===== PANEL 6: ELLENFÉL ELEMZÉS =====
+function renderEllenfelElemzes(rows) {
+  const el = document.getElementById('ellenfelContent');
+  if (!el) return;
 
-  // Adatok kiolvasása az Excel-ből
-  const penStart = findRowContains(rows, 'Pénzügyek');
-  const eredmKim = findRowContains(rows, 'Eredménykimutatás', penStart > -1 ? penStart : 0);
-  const base = eredmKim > -1 ? eredmKim : 0;
+  // Collect per-team data from Összefoglaló
+  const elemStart = findRowContains(rows, 'Elemzés');
+  const rNKB = findRowContains(rows, 'Nettó kamatbevétel', elemStart > -1 ? elemStart : 0);
+  const rProfit = findRowContains(rows, 'Adózás utáni eredmény', elemStart > -1 ? elemStart : 0);
+  const rHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
+  const rBetet = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
+  const rEszkoz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
+  const rPenz = findRowContains(rows, 'Pénzeszköz a periódus végén', elemStart > -1 ? elemStart : 0);
+  const rBKhitel = findRowContains(rows, 'Bankközi kamatok - hitel');
+  const bkHitelKamat = rBKhitel > -1 ? val(rows, rBKhitel, 0) : 3.9;
 
-  const rSzemKtg = getFieldInBlock(rows, base, 'Személyi jellegű', 60);
-  const rKepzKtg = getFieldInBlock(rows, base, 'Képzési költség', 60);
+  // Loan type sections
+  const hitelStart = findRowContains(rows, 'Hitelek');
+  const loanTypes = ['Folyószámlahitel', 'Személyi kölcsön', 'Jelzálog hitel', 'Állami hitel', 'Vállalati hitel'];
 
-  // HR szekció keresése
-  const hrStart = findRowContains(rows, 'Emberi erőforrás');
-  const hrBase = hrStart > -1 ? hrStart : 0;
+  // Per team computed metrics
+  const teamMetrics = TEAMS.map((name, ti) => {
+    const nkb = rNKB > -1 ? val(rows, rNKB, ti) : 0;
+    const profit = rProfit > -1 ? val(rows, rProfit, ti) : 0;
+    const hitel = rHitel > -1 ? val(rows, rHitel, ti) : 0;
+    const betet = rBetet > -1 ? val(rows, rBetet, ti) : 0;
+    const eszkoz = rEszkoz > -1 ? val(rows, rEszkoz, ti) : 0;
+    const penz = rPenz > -1 ? val(rows, rPenz, ti) : 0;
 
-  const rLetszam = getFieldInBlock(rows, hrBase, 'Létszám', 30);
-  const rBer = getFieldInBlock(rows, hrBase, 'Bér / fő', 30);
-  const rBerAlt = rBer < 0 ? getFieldInBlock(rows, hrBase, 'Bér/fő', 30) : rBer;
-  const rKepzes = getFieldInBlock(rows, hrBase, 'Képzés / fő', 30);
-  const rKepzesAlt = rKepzes < 0 ? getFieldInBlock(rows, hrBase, 'Képzés/fő', 30) : rKepzes;
-  const rFelvetel = getFieldInBlock(rows, hrBase, 'Felvétel', 30);
-  const rFluk = getFieldInBlock(rows, hrBase, 'Fluktuáció', 30);
-  const rKihaszn = getFieldInBlock(rows, hrBase, 'Kihasználtság', 30);
+    // Computed
+    const betetHitelRatio = hitel > 0 ? (betet / hitel * 100).toFixed(0) : '?';
+    const nkbMarzs = hitel > 0 ? (nkb / hitel * 100).toFixed(2) : '?';
+    const roa = eszkoz > 0 ? (profit / eszkoz * 100).toFixed(2) : '?';
+    const bkPozicio = hitel + penz - betet; // ha pozitív → bankközi tartozás
+    const sajatToke = eszkoz - betet - Math.max(0, bkPozicio);
+    const tokemegfeleles = eszkoz > 0 ? (sajatToke / eszkoz * 100).toFixed(1) : '?';
 
-  const curLetszam = rLetszam > -1 ? jtrVal(rows, rLetszam) : 300;
-  const curBer = (rBerAlt > -1 ? jtrVal(rows, rBerAlt) : 930);
-  const curKepzes = (rKepzesAlt > -1 ? jtrVal(rows, rKepzesAlt) : 70);
-  const curFelvetel = rFelvetel > -1 ? jtrVal(rows, rFelvetel) : 0;
-  const curFluk = rFluk > -1 ? jtrVal(rows, rFluk) : 0;
-  const curKihaszn = rKihaszn > -1 ? jtrVal(rows, rKihaszn) : 0;
+    // Per loan type: kamat, promó, piaci részesedés
+    const loanData = {};
+    for (const lt of loanTypes) {
+      const ltStart = findRowContains(rows, lt, hitelStart > -1 ? hitelStart : 0);
+      if (ltStart < 0) continue;
+      const rKamat = getFieldInBlock(rows, ltStart, 'Kamat', 3);
+      const rPromo = getFieldInBlock(rows, ltStart, 'Promóciós', 5);
+      const rAll = getFieldInBlock(rows, ltStart, 'Hitelállomány', 10);
+      const rBehajt = getFieldInBlock(rows, ltStart, 'Behajthatatlan', 8);
+      loanData[lt] = {
+        kamat: rKamat > -1 ? val(rows, rKamat, ti) : null,
+        promo: rPromo > -1 ? val(rows, rPromo, ti) : null,
+        allomany: rAll > -1 ? val(rows, rAll, ti) : null,
+        behajt: rBehajt > -1 ? val(rows, rBehajt, ti) : null,
+      };
+    }
 
-  // Globális tárolás
-  window._hrParams = { curLetszam, curBer, curKepzes, curFelvetel, curFluk, curKihaszn, piaciAtlag };
+    // Total promó
+    let osszPromo = 0;
+    for (const lt of Object.values(loanData)) { osszPromo += (lt.promo || 0); }
 
-  const defaultKepzes = isLastRound ? 0 : curKepzes;
+    return {
+      name, ti, nkb, profit, hitel, betet, eszkoz, penz,
+      betetHitelRatio, nkbMarzs, roa, bkPozicio, sajatToke, tokemegfeleles,
+      loanData, osszPromo,
+      promoIntenzitas: hitel > 0 ? (osszPromo / hitel * 10000).toFixed(1) : '?',
+    };
+  });
 
+  // === RENDER ===
   let html = '';
 
-  // Utolsó kör figyelmeztetés
-  if (isLastRound) {
-    html += `<div class="hr-last-round-box">⚠️ UTOLSÓ KÖR — Ajánlás: Bér minimumra (450), Képzés 0-ra, felesleges IT eladása</div>`;
+  // 1. Összefoglaló tábla
+  html += '<h4 style="color:#e94560; margin-bottom:8px;">Visszaszámolt mutatók (minden csapat)</h4>';
+  html += '<div style="overflow-x:auto;"><table><tr><th>Mutató</th>';
+  TEAMS.forEach((t, i) => {
+    const s = i === JTR ? 'style="background:#f5a623; color:#000;"' : '';
+    html += `<th ${s}>${t}</th>`;
+  });
+  html += '</tr>';
+
+  const metricRows = [
+    { label: 'Nettó kamatmarzs %', key: 'nkbMarzs', info: 'Nettó kamatbevétel / Hitelállomány × 100' },
+    { label: 'ROA %', key: 'roa', info: 'Adózás utáni eredmény / Összes eszköz × 100' },
+    { label: 'Betét/Hitel arány %', key: 'betetHitelRatio', info: 'Betétállomány / Hitelállomány × 100. 100% felett: betéttöbblet. Alatt: bankköziből finanszíroz.' },
+    { label: 'Tőkemegfelelés % (becslés)', key: 'tokemegfeleles', info: 'Saját tőke / Összes eszköz × 100. 8% alatt: büntetőpont!' },
+    { label: 'Promó intenzitás (promó/hitel)', key: 'promoIntenzitas', info: 'Összes hitel promóció / Hitelállomány × 10000. Magasabb = agresszívabb ügyfélszerzés.' },
+  ];
+
+  for (const mr of metricRows) {
+    html += `<tr><td>${mr.label} <span class="info-btn" onclick="showInfo('${mr.label}', '${mr.info}')">i</span></td>`;
+    const vals = teamMetrics.map(t => parseFloat(t[mr.key]) || 0);
+    const best = mr.key === 'roa' || mr.key === 'nkbMarzs' ? Math.max(...vals) : null;
+    teamMetrics.forEach((t, i) => {
+      const v = t[mr.key];
+      const isJtr = i === JTR;
+      const isBest = best !== null && parseFloat(v) === best;
+      let style = isJtr ? 'font-weight:700; color:#f5a623;' : '';
+      if (isBest) style += ' background:rgba(76,175,80,0.15);';
+      html += `<td style="${style}">${v}${mr.key.includes('atio') || mr.key.includes('Marzs') || mr.key.includes('roa') || mr.key.includes('megfeleles') || mr.key.includes('ntenzitas') ? '' : ''}</td>`;
+    });
+    html += '</tr>';
   }
 
-  // Jelenlegi adatok
-  html += `<div style="margin-bottom:12px; font-size:13px; color:#aaa;">`;
-  html += `Jelenlegi: Létszám: <strong style="color:#fff;">${curLetszam}</strong> | Bér/fő: <strong style="color:#fff;">${fmtN(curBer)}</strong> | Képzés/fő: <strong style="color:#fff;">${fmtN(curKepzes)}</strong> | Fluktuáció: <strong style="color:#fff;">${curFluk}</strong> | Kihasználtság: <strong style="color:#fff;">${curKihaszn.toFixed(1)}%</strong>`;
-  html += `</div>`;
+  // Bankközi pozíció sor
+  html += '<tr><td>Bankközi pozíció <span class="info-btn" onclick="showInfo(\'Bankközi pozíció\', \'Pozitív = tartozás (bankközitől veszünk kölcsön). Negatív = követelés (felesleget kihelyezzük).\')">i</span></td>';
+  teamMetrics.forEach((t, i) => {
+    const isJtr = i === JTR;
+    const isDebt = t.bkPozicio > 0;
+    let style = isJtr ? 'font-weight:700;' : '';
+    style += isDebt ? ' color:#e94560;' : ' color:#4caf50;';
+    html += `<td style="${style}">${isDebt ? '+' : ''}${fmtN(Math.round(t.bkPozicio))} ${isDebt ? '(tartozás)' : '(követelés)'}</td>`;
+  });
+  html += '</tr>';
 
-  // Csúszkák
-  html += `<div class="hr-slider-group">`;
-  html += `<div class="hr-slider-item">`;
-  html += `<label>Bér / fő</label>`;
-  html += `<input type="number" id="hrWage" value="${curBer}" min="450" max="1500" step="10" oninput="document.getElementById('hrWage_range').value=this.value; updateHR();">`;
-  html += `<input type="range" id="hrWage_range" min="450" max="1500" step="10" value="${curBer}" oninput="document.getElementById('hrWage').value=this.value; updateHR();">`;
-  html += `</div>`;
+  html += '</table></div>';
 
-  html += `<div class="hr-slider-item">`;
-  html += `<label>Felvétel (negatív = elbocsátás)</label>`;
-  html += `<input type="number" id="hrHire" value="0" min="-50" max="200" step="1" oninput="document.getElementById('hrHire_range').value=this.value; updateHR();">`;
-  html += `<input type="range" id="hrHire_range" min="-50" max="200" step="1" value="0" oninput="document.getElementById('hrHire').value=this.value; updateHR();">`;
-  html += `</div>`;
+  // 2. Kamatstratégia összehasonlítás
+  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Kamatstratégia — hiteltípusonként</h4>';
+  html += '<div style="overflow-x:auto;"><table><tr><th>Hiteltípus</th>';
+  TEAMS.forEach((t, i) => {
+    const s = i === JTR ? 'style="background:#f5a623; color:#000;"' : '';
+    html += `<th ${s}>${t}</th>`;
+  });
+  html += '<th>Piaci átlag</th></tr>';
 
-  html += `<div class="hr-slider-item">`;
-  html += `<label>Képzés / fő</label>`;
-  html += `<input type="number" id="hrTraining" value="${defaultKepzes}" min="0" max="200" step="5" oninput="document.getElementById('hrTraining_range').value=this.value; updateHR();">`;
-  html += `<input type="range" id="hrTraining_range" min="0" max="200" step="5" value="${defaultKepzes}" oninput="document.getElementById('hrTraining').value=this.value; updateHR();">`;
-  html += `</div>`;
-  html += `</div>`;
+  for (const lt of loanTypes) {
+    // Kamat sor
+    html += `<tr><td><strong>${lt}</strong> — Kamat %</td>`;
+    let sumK = 0, cntK = 0;
+    TEAMS.forEach((t, i) => {
+      const d = teamMetrics[i].loanData[lt];
+      const k = d ? d.kamat : null;
+      if (k !== null) { sumK += k; cntK++; }
+      const isJtr = i === JTR;
+      const isLowest = k !== null && cntK > 0;
+      let style = isJtr ? 'font-weight:700; color:#f5a623;' : '';
+      html += `<td style="${style}">${k !== null ? k.toFixed(1) : '-'}</td>`;
+    });
+    const avgK = cntK > 0 ? (sumK / cntK) : 0;
+    html += `<td style="color:#888;">${avgK.toFixed(1)}</td></tr>`;
 
-  // Eredmények
-  html += `<div class="hr-result-grid" id="hrResults"></div>`;
+    // Promó sor
+    html += `<tr style="font-size:0.9em; color:#aaa;"><td style="padding-left:20px;">↳ Promóció</td>`;
+    TEAMS.forEach((t, i) => {
+      const d = teamMetrics[i].loanData[lt];
+      const p = d ? d.promo : null;
+      const isJtr = i === JTR;
+      let style = isJtr ? 'color:#f5a623;' : '';
+      html += `<td style="${style}">${p !== null ? fmtN(Math.round(p)) : '-'}</td>`;
+    });
+    html += '<td></td></tr>';
 
-  // IT eladás javaslat
-  html += `<div id="hrITadvice"></div>`;
+    // Állomány sor
+    html += `<tr style="font-size:0.9em; color:#aaa;"><td style="padding-left:20px;">↳ Állomány</td>`;
+    TEAMS.forEach((t, i) => {
+      const d = teamMetrics[i].loanData[lt];
+      const a = d ? d.allomany : null;
+      const isJtr = i === JTR;
+      let style = isJtr ? 'color:#f5a623;' : '';
+      html += `<td style="${style}">${a !== null ? fmt(a) : '-'}</td>`;
+    });
+    html += '<td></td></tr>';
+  }
 
-  // Optimális keresés gomb
-  html += `<div style="margin-top:14px;"><button onclick="runHRGridSearch()">🔍 Optimális keresés</button></div>`;
-  html += `<div id="hrOptimalResults"></div>`;
+  html += '</table></div>';
 
-  document.getElementById('hrContent').innerHTML = html;
-  updateHR();
-}
+  // 3. Piaci részesedés chart
+  const chartLabels = loanTypes.map(l => l.replace(' hitel','').replace('kölcsön',''));
+  const chartDatasets = TEAMS.map((name, ti) => {
+    const data = loanTypes.map(lt => {
+      const d = teamMetrics[ti].loanData[lt];
+      const allomany = d ? (d.allomany || 0) : 0;
+      // Total for this loan type
+      let total = 0;
+      TEAMS.forEach((_, j) => {
+        const dd = teamMetrics[j].loanData[lt];
+        total += dd ? (dd.allomany || 0) : 0;
+      });
+      return total > 0 ? Math.round(allomany / total * 100) : 0;
+    });
+    return {
+      label: name,
+      data,
+      backgroundColor: ti === JTR ? 'rgba(245,166,35,0.8)' : TEAM_COLORS_ALPHA[ti],
+      borderColor: ti === JTR ? '#f5a623' : TEAM_COLORS[ti],
+      borderWidth: ti === JTR ? 2 : 1,
+    };
+  });
 
-function updateHR() {
-  if (!window._hrParams) return;
-  const { curLetszam, piaciAtlag } = window._hrParams;
+  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés (hiteltípusonként, %)</h4>';
+  html += '<canvas id="piaciReszChart" height="80"></canvas>';
 
-  const wage = parseFloat(document.getElementById('hrWage').value) || 450;
-  const hire = parseInt(document.getElementById('hrHire').value) || 0;
-  const training = parseFloat(document.getElementById('hrTraining').value) || 0;
+  el.innerHTML = html;
 
-  const result = calcHRCost(wage, hire, training, curLetszam, piaciAtlag);
-
-  const kColor = kihasznColor(result.kihaszn);
-  const kihasznLabel = result.kihaszn > 100 ? 'TÚLÓRA!' : result.kihaszn > 95 ? 'Szoros' : result.kihaszn >= 85 ? 'Optimális' : 'Alacsony';
-
-  let rhtml = '';
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#e94560;">${result.fluk}</div><div class="hr-label">Fluktuáció</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#f5a623;">${result.letszam}</div><div class="hr-label">Létszám végén</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:${kColor};">${result.kihaszn.toFixed(1)}%</div><div class="hr-label">Kihasználtság (${kihasznLabel})</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.szemKtg)}</div><div class="hr-label">Személyi ktg</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.kepzKtg)}</div><div class="hr-label">Képzési ktg</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:#aaa;">${fmtN(result.felvKtg)}</div><div class="hr-label">Felvételi ktg</div></div>`;
-  rhtml += `<div class="hr-result-card"><div class="hr-val" style="color:${result.tulora > 0 ? '#e94560' : '#4caf50'};">${fmtN(result.tulora)}</div><div class="hr-label">Túlóra ktg</div></div>`;
-  rhtml += `<div class="hr-result-card" style="border:2px solid #f5a623;"><div class="hr-val" style="color:#f5a623;">${fmtN(result.osszKtg)}</div><div class="hr-label">ÖSSZES HR KÖLTSÉG</div></div>`;
-
-  document.getElementById('hrResults').innerHTML = rhtml;
-
-  // IT eladás javaslat
-  renderITadvice();
+  // Render chart
+  new Chart(document.getElementById('piaciReszChart'), {
+    type: 'bar',
+    data: { labels: chartLabels, datasets: chartDatasets },
+    options: {
+      responsive: true,
+      scales: {
+        x: { stacked: true, ticks: { color: '#aaa' }, grid: { color: '#333' } },
+        y: { stacked: true, max: 100, ticks: { color: '#aaa', callback: v => v + '%' }, grid: { color: '#333' } },
+      },
+      plugins: {
+        legend: { labels: { color: '#eee' } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+      }
+    }
+  });
 }
 
 function renderITadvice() {
