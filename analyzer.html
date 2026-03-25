@@ -1668,8 +1668,8 @@ function calcHRCost(wage, hire, training, letszamStart, piaci) {
   const letszam = Math.max(1, letszamStart + hire + fluk);
   const szemKtg = letszam * wage;
   const kepzKtg = letszam * training;
-  const felvKtg = Math.abs(hire) * 200;
-  const adminKtg = letszam * 48; // ~48 EM/fő adminisztrációs költség
+  const felvKtg = 0; // felvételi ktg beolvad az adminba
+  const adminKtg = (Math.abs(fluk) + Math.abs(hire)) * 200; // fluktuáció + felvétel × 200/fő
   const kihaszn = calcKihaszn(letszam, training);
   const tulora = kihaszn > 100 ? letszam * wage * ((kihaszn - 100) / 100) * 3.5 : 0;
   return { wage, hire, training, fluk, letszam, kihaszn, szemKtg, kepzKtg, felvKtg, adminKtg, tulora, osszKtg: szemKtg + kepzKtg + felvKtg + adminKtg + tulora };
