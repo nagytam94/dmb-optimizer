@@ -384,6 +384,11 @@ button:hover { background: #c73850; }
   .calc-group { grid-template-columns: 1fr; }
 }
 </style>
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DMB Analyzer">
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -394,8 +399,10 @@ button:hover { background: #c73850; }
     <select id="periodSelect" onchange="switchPeriod(this.value)"></select>
   </div>
   <div style="display:flex; gap:8px;">
+    <a href="https://edu.ecosim.hu/simulation/summary" target="_blank" style="background:#2196f3; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">🎮 Játékplatform →</a>
     <a href="https://nagytam94.github.io/dmb-optimizer/" target="_blank" style="background:#e94560; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">Marketing Kalkulátor →</a>
     <a href="https://nagytam94.github.io/dmb-optimizer/hr.html" target="_blank" style="background:#4caf50; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">HR Optimalizátor →</a>
+    <button id="pwaInstallBtn" style="display:none; background:#4caf50; color:#fff; padding:8px 16px; border-radius:6px; border:none; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">📲 Telepítés</button>
   </div>
 </div>
 
@@ -2560,6 +2567,34 @@ function applyHROptimal(wage, hire, training) {
   document.getElementById('hrTraining').value = training;
   document.getElementById('hrTraining_range').value = training;
   updateHR();
+}
+</script>
+<script>
+// PWA Install
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('pwaInstallBtn').style.display = 'inline-block';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const result = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        btn.style.display = 'none';
+      }
+    });
+  }
+});
+
+// Register minimal service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>
 </body>
