@@ -22,11 +22,8 @@ a:hover { text-decoration: underline; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
 .input-group { display: flex; flex-direction: column; gap: 3px; }
 .input-group label { font-size: 0.78rem; color: #aaa; }
-.input-group input[type="number"] { background: #0f3460; border: 1px solid #335; color: #fff; padding: 6px 10px; border-radius: 6px; width: 90px; font-size: 0.95rem; text-align: center; }
+.input-group input[type="number"] { background: #0f3460; border: 1px solid #335; color: #fff; padding: 6px 10px; border-radius: 6px; width: 100px; font-size: 0.95rem; text-align: center; }
 .input-group input[type="number"]:focus { border-color: #f5a623; outline: none; }
-
-.sum-ok { color: #4caf50; font-weight: bold; }
-.sum-bad { color: #e94560; font-weight: bold; }
 
 .btn { background: #0f3460; border: 1px solid #e94560; color: #e94560; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
 .btn:hover { background: #e94560; color: #fff; }
@@ -63,12 +60,15 @@ a:hover { text-decoration: underline; }
 .formula-box .highlight { color: #f5a623; }
 .formula-box .red { color: #e94560; }
 
-table.k-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-table.k-table th, table.k-table td { padding: 8px 12px; border: 1px solid #335; text-align: center; }
+table.k-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+table.k-table th, table.k-table td { padding: 8px 10px; border: 1px solid #335; text-align: center; }
 table.k-table th { background: #0f3460; color: #f5a623; }
 table.k-table td { background: #16213e; }
+table.k-table td.best { color: #4caf50; font-weight: bold; }
 
+.preset-active { background: #f5a623 !important; color: #1a1a2e !important; }
 .note { font-size: 0.85rem; color: #aaa; margin-top: 10px; font-style: italic; }
+.tag { display: inline-block; background: #0f3460; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #f5a623; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -78,41 +78,49 @@ table.k-table td { background: #16213e; }
   <a href="https://nagytam94.github.io/dmb-optimizer/analyzer.html">&larr; Dashboard</a>
 </div>
 
-<!-- 1. Piac beállítások -->
+<!-- 1. Piac preset -->
 <div class="card gold-border">
-  <h2>Piac beállítások</h2>
-  <div class="row">
-    <div class="input-group"><label>TV</label><input type="number" id="w_tv" value="20" min="0" max="100" oninput="onParamChange()"></div>
-    <div class="input-group"><label>Online</label><input type="number" id="w_online" value="40" min="0" max="100" oninput="onParamChange()"></div>
-    <div class="input-group"><label>Offline</label><input type="number" id="w_offline" value="20" min="0" max="100" oninput="onParamChange()"></div>
-    <div class="input-group"><label>PR</label><input type="number" id="w_pr" value="12" min="0" max="100" oninput="onParamChange()"></div>
-    <div class="input-group"><label>CSR</label><input type="number" id="w_csr" value="8" min="0" max="100" oninput="onParamChange()"></div>
-    <div style="align-self:end;padding-bottom:4px;">Összeg: <span id="weightSum" class="sum-ok">100 &#10003;</span></div>
+  <h2>Piac kiválasztása</h2>
+  <div class="row" style="margin-bottom:0;">
+    <button class="btn btn-gold preset-btn" id="btn_selejtező_A" onclick="loadPreset('selejtező_A')">Selejtező A <span class="tag">50 mérés</span></button>
+    <button class="btn btn-gold preset-btn" id="btn_teszt_H" onclick="loadPreset('teszt_H')">Teszt H <span class="tag">65 mérés</span></button>
+    <button class="btn btn-gold preset-btn" id="btn_egyéni" onclick="loadPreset('egyéni')">Egyéni</button>
   </div>
-  <div class="row">
-    <div class="input-group"><label>Base %</label><input type="number" id="inp_base" value="17.55" step="0.01" oninput="onParamChange()"></div>
-    <div class="input-group"><label>Total max %</label><input type="number" id="inp_totalMax" value="63.19" step="0.01" oninput="onParamChange()"></div>
-    <button class="btn btn-gold" onclick="loadPreset('selejtező_A')">Selejtező A</button>
-    <button class="btn btn-gold" onclick="loadPreset('teszt_H')">Teszt H</button>
-    <button class="btn btn-gold" onclick="loadPreset('egyéni')">Egyéni</button>
+  <p class="note" id="presetNote" style="margin-top:10px;"></p>
+</div>
+
+<!-- 2. Modell paraméterek (összecsukható) -->
+<div class="card" id="paramCard">
+  <h2>Modell paraméterek <button class="btn" style="float:right;padding:4px 12px;font-size:0.8rem;" onclick="toggleParams()">Szerkesztés</button></h2>
+  <div id="paramPanel" style="display:none;margin-top:14px;">
+    <div class="row">
+      <div class="input-group"><label>Base %</label><input type="number" id="inp_base" value="22.27" step="0.01" oninput="onParamChange()"></div>
+    </div>
+    <table class="k-table" style="margin-top:8px;">
+      <tr><th>Csatorna</th><th>a (max hatás)</th><th>K (félérték)</th></tr>
+      <tr><td>TV</td><td><input type="number" id="a_tv" value="11.994" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_tv" value="222948" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>Online</td><td><input type="number" id="a_online" value="24.790" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_online" value="251724" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>Offline</td><td><input type="number" id="a_offline" value="13.966" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_offline" value="345675" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>PR</td><td><input type="number" id="a_pr" value="9.121" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_pr" value="615234" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>CSR</td><td><input type="number" id="a_csr" value="4.088" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_csr" value="118615" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+    </table>
   </div>
 </div>
 
-<!-- 2. Büdzsé Optimalizátor -->
+<!-- 3. Büdzsé Optimalizátor -->
 <div class="card">
-  <h2>Büdzsé Optimalizátor</h2>
+  <h2>Optimális elosztás</h2>
   <div class="row">
-    <div class="input-group"><label>Összes marketing büdzsé</label><input type="number" id="inp_budget" value="420000" step="1000" style="width:140px;" oninput="onParamChange()"></div>
-    <button class="btn" onclick="runOptimizer()" style="align-self:end;">Optimalizálás</button>
+    <div class="input-group"><label>Marketing büdzsé</label><input type="number" id="inp_budget" value="420000" step="10000" style="width:140px;" oninput="onParamChange()"></div>
   </div>
   <div id="optResult" class="alloc-cards"></div>
-  <div id="optBrand" class="big-number" style="display:none;">
+  <div id="optBrand" class="big-number">
     <div class="label">Becsült márka%</div>
-    <div class="value" id="optBrandVal"></div>
+    <div class="value" id="optBrandVal">—</div>
   </div>
 </div>
 
-<!-- 3. Kézi csúszkák + Grafikonok -->
+<!-- 4. Kézi csúszkák + Grafikonok -->
 <div class="grid-2">
   <div class="card">
     <h2>Kézi allokáció</h2>
@@ -120,112 +128,126 @@ table.k-table td { background: #16213e; }
     <div class="manual-summary">
       <div><div class="lbl">Összes költés</div><div class="val" id="manualTotal">0</div></div>
       <div><div class="lbl">Becsült márka%</div><div class="val" id="manualBrand">0%</div></div>
+      <div><div class="lbl">vs Optimális</div><div class="val" id="manualDelta">—</div></div>
     </div>
     <div style="text-align:center;margin-top:12px;">
       <button class="btn" onclick="resetToOptimal()">Reset optimálisra</button>
+      <button class="btn" onclick="resetToDefault()">Reset alapértékre</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>Csatorna hatékonyság (100k költésnél)</h2>
+    <h2>Csatorna hatékonyság</h2>
     <div class="chart-container"><canvas id="effChart"></canvas></div>
   </div>
 </div>
 
 <div class="grid-2">
   <div class="card">
-    <h2>Optimális elosztás</h2>
+    <h2>Elosztás</h2>
     <div class="chart-container"><canvas id="doughnutChart"></canvas></div>
   </div>
 
   <div class="card">
-    <h2>Képlet &amp; konstansok</h2>
-    <div class="formula-box">
-      <span class="highlight">márka%</span> = <span class="red">BASE</span> + <span class="red">TOTAL_MAX</span> &times; &Sigma; (<span class="highlight">w<sub>i</sub></span> &times; (1 - e<sup>-spend<sub>i</sub> / <span class="highlight">k<sub>i</sub></span></sup>))
-    </div>
-    <table class="k-table">
-      <tr><th>Csatorna</th><th>K érték</th><th>Jelentés</th></tr>
-      <tr><td>TV</td><td>241 000</td><td>Gyors telítődés</td></tr>
-      <tr><td>Online</td><td>124 000</td><td>Leggyorsabb</td></tr>
-      <tr><td>Offline</td><td>327 000</td><td>Közepes</td></tr>
-      <tr><td>PR</td><td>2 181 000</td><td>Lassú</td></tr>
-      <tr><td>CSR</td><td>2 265 000</td><td>Leglassúbb</td></tr>
-    </table>
-    <p class="note">A K értékek állandóak minden piacon, csak a súlyok, base és totalMax változik.</p>
+    <h2>Telítődési görbék</h2>
+    <div class="chart-container"><canvas id="satChart"></canvas></div>
   </div>
 </div>
 
+<!-- 5. Képlet & paraméterek -->
+<div class="card">
+  <h2>Modell összefoglaló</h2>
+  <div class="formula-box">
+    <span class="highlight">márka%</span> = <span class="red">BASE</span> + &Sigma; (<span class="highlight">a<sub>i</sub></span> &times; (1 - e<sup>-spend<sub>i</sub> / <span class="highlight">K<sub>i</sub></span></sup>))
+  </div>
+  <table class="k-table" id="summaryTable">
+    <tr><th>Csatorna</th><th>a</th><th>K</th><th>a/K hatékonyság</th><th>80% telítés</th><th>Max hatás</th></tr>
+  </table>
+  <p class="note">Az a és K értékek PIACONKÉNT ELTÉRNEK. Minden új piacon újrakalibrálás szükséges (dmbscan skill: 50 teszt &lt; 1 sec).</p>
+</div>
+
 <script>
-// === KONSTANSOK ===
+// === CONFIG ===
 const CHANNELS = ['tv', 'online', 'offline', 'pr', 'csr'];
 const CH_LABELS = { tv: 'TV', online: 'Online', offline: 'Offline', pr: 'PR', csr: 'CSR' };
 const CH_COLORS = { tv: '#e94560', online: '#4caf50', offline: '#2196f3', pr: '#ff9800', csr: '#9c27b0' };
-const K = { tv: 241000, online: 124000, offline: 327000, pr: 2181000, csr: 2265000 };
 
 const PRESETS = {
-  'selejtező_A': { name: 'Selejtező A piac', base: 17.55, totalMax: 63.19, weights: { tv: 20, online: 40, offline: 20, pr: 12, csr: 8 } },
-  'teszt_H':     { name: 'Teszt H piac',     base: 24.60, totalMax: 46.30, weights: { tv: 35, online: 25, offline: 25, pr: 8, csr: 7 } },
+  'selejtező_A': {
+    name: 'Selejtező 1. régió, Piac A',
+    note: 'R²=0.99980, 100 mérés, 2026-03-27 — 100k-500k RMSE=0.087',
+    base: 22.27,
+    a: { tv: 11.994, online: 24.790, offline: 13.966, pr: 9.121, csr: 4.088 },
+    K: { tv: 222948, online: 251724, offline: 345675, pr: 615234, csr: 118615 },
+    defaults: { tv: 180000, online: 95000, offline: 105000, pr: 22000, csr: 18000 }
+  },
+  'teszt_H': {
+    name: 'Tesztforduló, Piac H',
+    note: 'R²=0.997, 65 mérés, korábbi',
+    base: 24.60,
+    a: { tv: 16.30, online: 19.90, offline: 11.90, pr: 10.00, csr: 10.00 },
+    K: { tv: 241000, online: 124000, offline: 327000, pr: 2181000, csr: 2265000 },
+    defaults: { tv: 180000, online: 95000, offline: 30000, pr: 20000, csr: 41000 }
+  }
 };
 
+let currentPreset = 'selejtező_A';
 let optimalAlloc = {};
+let optimalBrand = 0;
 
 // === GETTERS ===
-function getWeights() {
-  const w = {};
-  CHANNELS.forEach(ch => w[ch] = parseFloat(document.getElementById('w_' + ch).value) || 0);
-  return w;
-}
 function getBase() { return parseFloat(document.getElementById('inp_base').value) || 0; }
-function getTotalMax() { return parseFloat(document.getElementById('inp_totalMax').value) || 0; }
 function getBudget() { return parseFloat(document.getElementById('inp_budget').value) || 0; }
+function getA(ch) { return parseFloat(document.getElementById('a_' + ch).value) || 0; }
+function getK(ch) { return parseFloat(document.getElementById('k_' + ch).value) || 1; }
 
-// === MODELL ===
-function brandPercent(spends, weights, base, totalMax) {
-  let sum = 0;
+// === MODEL ===
+function brandPercent(spends) {
+  const base = getBase();
+  let sum = base;
   CHANNELS.forEach(ch => {
-    const w = (weights[ch] || 0) / 100;
     const s = spends[ch] || 0;
-    sum += w * (1 - Math.exp(-s / K[ch]));
+    if (s > 0) sum += getA(ch) * (1 - Math.exp(-s / getK(ch)));
   });
-  return base + totalMax * sum;
+  return sum;
 }
 
-function marginal(ch, currentSpend, weights, totalMax) {
-  const w = (weights[ch] || 0) / 100;
-  return (totalMax * w / K[ch]) * Math.exp(-currentSpend / K[ch]);
+function marginalValue(ch, currentSpend) {
+  return (getA(ch) / getK(ch)) * Math.exp(-currentSpend / getK(ch));
 }
 
 // === PRESETS ===
 function loadPreset(key) {
-  if (key === 'egyéni') return;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('preset-active'));
+  if (key === 'egyéni') {
+    document.getElementById('btn_egyéni').classList.add('preset-active');
+    document.getElementById('presetNote').textContent = 'Egyéni paraméterek — szerkeszd a modell paramétereket.';
+    document.getElementById('paramPanel').style.display = '';
+    currentPreset = 'egyéni';
+    return;
+  }
   const p = PRESETS[key];
   if (!p) return;
-  CHANNELS.forEach(ch => document.getElementById('w_' + ch).value = p.weights[ch]);
+  currentPreset = key;
+  document.getElementById('btn_' + key).classList.add('preset-active');
+  document.getElementById('presetNote').textContent = p.name + ' — ' + p.note;
   document.getElementById('inp_base').value = p.base;
-  document.getElementById('inp_totalMax').value = p.totalMax;
+  CHANNELS.forEach(ch => {
+    document.getElementById('a_' + ch).value = p.a[ch];
+    document.getElementById('k_' + ch).value = p.K[ch];
+  });
+  document.getElementById('paramPanel').style.display = 'none';
   onParamChange();
 }
 
-// === WEIGHT SUM ===
-function updateWeightSum() {
-  const w = getWeights();
-  const sum = CHANNELS.reduce((s, ch) => s + w[ch], 0);
-  const el = document.getElementById('weightSum');
-  if (Math.abs(sum - 100) < 0.01) {
-    el.className = 'sum-ok';
-    el.innerHTML = sum.toFixed(0) + ' &#10003;';
-  } else {
-    el.className = 'sum-bad';
-    el.innerHTML = sum.toFixed(1) + ' &#10007;';
-  }
+function toggleParams() {
+  const panel = document.getElementById('paramPanel');
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
 }
 
-// === OPTIMIZER (Greedy) ===
+// === OPTIMIZER ===
 function runOptimizer() {
   const budget = getBudget();
-  const weights = getWeights();
-  const base = getBase();
-  const totalMax = getTotalMax();
   const step = Math.max(1, Math.round(budget / 1000));
   const alloc = {};
   CHANNELS.forEach(ch => alloc[ch] = 0);
@@ -234,43 +256,40 @@ function runOptimizer() {
   while (remaining >= step) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
-      if ((weights[ch] || 0) <= 0) return;
-      const m = marginal(ch, alloc[ch], weights, totalMax);
+      const m = marginalValue(ch, alloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
-    if (!bestCh) break;
+    if (!bestCh || bestMarg <= 0) break;
     alloc[bestCh] += step;
     remaining -= step;
   }
-  // maradék a legjobb csatornába
   if (remaining > 0) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
-      if ((weights[ch] || 0) <= 0) return;
-      const m = marginal(ch, alloc[ch], weights, totalMax);
+      const m = marginalValue(ch, alloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
     if (bestCh) alloc[bestCh] += remaining;
   }
 
   optimalAlloc = { ...alloc };
+  optimalBrand = brandPercent(alloc);
 
-  // Kártyák megjelenítése
+  // Cards
   const container = document.getElementById('optResult');
   container.innerHTML = CHANNELS.map(ch => {
     const pct = budget > 0 ? (alloc[ch] / budget * 100).toFixed(1) : 0;
-    return `<div class="alloc-card" style="border-top:3px solid ${CH_COLORS[ch]}">
+    const opacity = alloc[ch] > 0 ? 1 : 0.4;
+    return `<div class="alloc-card" style="border-top:3px solid ${CH_COLORS[ch]};opacity:${opacity}">
       <div class="ch-name">${CH_LABELS[ch]}</div>
       <div class="ch-amount">${Math.round(alloc[ch]).toLocaleString('hu')}</div>
       <div class="ch-pct">${pct}%</div>
     </div>`;
   }).join('');
 
-  const bp = brandPercent(alloc, weights, base, totalMax);
-  document.getElementById('optBrand').style.display = '';
-  document.getElementById('optBrandVal').textContent = bp.toFixed(2) + '%';
+  document.getElementById('optBrandVal').textContent = optimalBrand.toFixed(2) + '%';
 
-  // Csúszkák frissítése
+  // Sync sliders
   CHANNELS.forEach(ch => {
     const slider = document.getElementById('slider_' + ch);
     if (slider) slider.value = Math.round(alloc[ch]);
@@ -281,19 +300,15 @@ function runOptimizer() {
 
 // === SLIDERS ===
 function buildSliders() {
-  const container = document.getElementById('sliders');
-  container.innerHTML = CHANNELS.map(ch =>
+  document.getElementById('sliders').innerHTML = CHANNELS.map(ch =>
     `<div class="slider-group">
-      <label><span>${CH_LABELS[ch]}</span><span class="val" id="sliderVal_${ch}">0</span></label>
+      <label><span style="color:${CH_COLORS[ch]}">${CH_LABELS[ch]}</span><span class="val" id="sliderVal_${ch}">0</span></label>
       <input type="range" id="slider_${ch}" min="0" max="1000000" step="1000" value="0" oninput="updateManual()">
     </div>`
   ).join('');
 }
 
 function updateManual() {
-  const weights = getWeights();
-  const base = getBase();
-  const totalMax = getTotalMax();
   const spends = {};
   let total = 0;
   CHANNELS.forEach(ch => {
@@ -303,8 +318,13 @@ function updateManual() {
     document.getElementById('sliderVal_' + ch).textContent = v.toLocaleString('hu');
   });
   document.getElementById('manualTotal').textContent = total.toLocaleString('hu');
-  const bp = brandPercent(spends, weights, base, totalMax);
+  const bp = brandPercent(spends);
   document.getElementById('manualBrand').textContent = bp.toFixed(2) + '%';
+
+  const delta = bp - optimalBrand;
+  const deltaEl = document.getElementById('manualDelta');
+  deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2) + '%';
+  deltaEl.style.color = delta >= -0.01 ? '#4caf50' : '#e94560';
 }
 
 function resetToOptimal() {
@@ -315,17 +335,24 @@ function resetToOptimal() {
   updateManual();
 }
 
+function resetToDefault() {
+  const p = PRESETS[currentPreset];
+  if (!p || !p.defaults) return;
+  CHANNELS.forEach(ch => {
+    const slider = document.getElementById('slider_' + ch);
+    if (slider) slider.value = p.defaults[ch] || 0;
+  });
+  updateManual();
+}
+
 // === CHARTS ===
 let effChartInstance = null;
 let doughnutInstance = null;
+let satChartInstance = null;
 
 function updateEfficiencyChart() {
-  const weights = getWeights();
-  const totalMax = getTotalMax();
-  const data = CHANNELS.map(ch => {
-    const w = (weights[ch] || 0) / 100;
-    return totalMax * w * (1 - Math.exp(-100000 / K[ch]));
-  });
+  // Bar chart: brand% gain from 100k in each channel
+  const data = CHANNELS.map(ch => getA(ch) * (1 - Math.exp(-100000 / getK(ch))));
   const colors = CHANNELS.map(ch => CH_COLORS[ch]);
 
   if (effChartInstance) {
@@ -336,22 +363,13 @@ function updateEfficiencyChart() {
       type: 'bar',
       data: {
         labels: CHANNELS.map(ch => CH_LABELS[ch]),
-        datasets: [{
-          label: 'Márka% hozzájárulás 100k-nál',
-          data: data,
-          backgroundColor: colors,
-          borderRadius: 6,
-        }]
+        datasets: [{ label: 'Márka% hozzájárulás 100k-nál', data, backgroundColor: colors, borderRadius: 6 }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ctx.parsed.y.toFixed(2) + '%' } }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '+' + ctx.parsed.y.toFixed(2) + '%' } } },
         scales: {
-          y: { beginAtZero: true, ticks: { color: '#aaa', callback: v => v.toFixed(1) + '%' }, grid: { color: '#333' } },
+          y: { beginAtZero: true, ticks: { color: '#aaa', callback: v => '+' + v.toFixed(1) + '%' }, grid: { color: '#333' } },
           x: { ticks: { color: '#aaa' }, grid: { display: false } }
         }
       }
@@ -371,42 +389,91 @@ function updateDoughnutChart(alloc, budget) {
   } else {
     doughnutInstance = new Chart(document.getElementById('doughnutChart'), {
       type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: colors,
-          borderWidth: 0,
-        }]
-      },
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { position: 'bottom', labels: { color: '#ccc', padding: 12 } },
-          tooltip: { callbacks: { label: ctx => {
-            const v = ctx.parsed;
-            const pct = budget > 0 ? (v / budget * 100).toFixed(1) : 0;
-            return ctx.label + ': ' + pct + '%';
-          }}}
+          tooltip: { callbacks: { label: ctx => { const pct = budget > 0 ? (ctx.parsed / budget * 100).toFixed(1) : 0; return ctx.label + ': ' + pct + '%'; } } }
         }
       }
     });
   }
 }
 
+function updateSaturationChart() {
+  const maxX = 600000;
+  const steps = 50;
+  const labels = [];
+  for (let x = 0; x <= maxX; x += maxX / steps) labels.push(Math.round(x / 1000) + 'k');
+
+  const datasets = CHANNELS.map(ch => {
+    const data = [];
+    for (let x = 0; x <= maxX; x += maxX / steps) {
+      data.push(getA(ch) * (1 - Math.exp(-x / getK(ch))));
+    }
+    return { label: CH_LABELS[ch], data, borderColor: CH_COLORS[ch], backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3 };
+  });
+
+  if (satChartInstance) {
+    satChartInstance.data.labels = labels;
+    satChartInstance.data.datasets = datasets;
+    satChartInstance.update();
+  } else {
+    satChartInstance = new Chart(document.getElementById('satChart'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#ccc', padding: 10, usePointStyle: true } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': +' + ctx.parsed.y.toFixed(2) + '%' } } },
+        scales: {
+          y: { beginAtZero: true, ticks: { color: '#aaa', callback: v => '+' + v + '%' }, grid: { color: '#333' }, title: { display: true, text: 'Márka% hozzájárulás', color: '#aaa' } },
+          x: { ticks: { color: '#aaa', maxTicksLimit: 12 }, grid: { color: '#222' }, title: { display: true, text: 'Költés', color: '#aaa' } }
+        }
+      }
+    });
+  }
+}
+
+function updateSummaryTable() {
+  const tbody = document.getElementById('summaryTable');
+  const headerRow = tbody.querySelector('tr');
+  tbody.innerHTML = '';
+  tbody.appendChild(headerRow);
+
+  const efficiencies = CHANNELS.map(ch => getA(ch) / getK(ch));
+  const maxEff = Math.max(...efficiencies);
+
+  CHANNELS.forEach((ch, i) => {
+    const a = getA(ch);
+    const k = getK(ch);
+    const eff = a / k;
+    const sat80 = -k * Math.log(0.2);
+    const isBest = Math.abs(eff - maxEff) < 1e-10;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:${CH_COLORS[ch]};font-weight:bold">${CH_LABELS[ch]}</td>
+      <td>${a.toFixed(2)}</td>
+      <td>${Math.round(k).toLocaleString('hu')}</td>
+      <td class="${isBest ? 'best' : ''}">${(eff * 100000).toFixed(2)}</td>
+      <td>${Math.round(sat80 / 1000).toLocaleString('hu')}k</td>
+      <td>+${a.toFixed(1)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 // === MASTER UPDATE ===
 function onParamChange() {
-  updateWeightSum();
+  runOptimizer();
   updateEfficiencyChart();
-  updateManual();
-  const budget = getBudget();
-  if (budget > 0) runOptimizer();
+  updateSaturationChart();
+  updateSummaryTable();
 }
 
 // === INIT ===
 buildSliders();
-onParamChange();
+loadPreset('selejtező_A');
 </script>
 </body>
 </html>
