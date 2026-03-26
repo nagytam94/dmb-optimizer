@@ -98,11 +98,11 @@ table.k-table td.best { color: #4caf50; font-weight: bold; }
     </div>
     <table class="k-table" style="margin-top:8px;">
       <tr><th>Csatorna</th><th>a (max hatás)</th><th>K (félérték)</th></tr>
-      <tr><td>TV</td><td><input type="number" id="a_tv" value="11.994" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_tv" value="222948" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>Online</td><td><input type="number" id="a_online" value="24.790" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_online" value="251724" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>Offline</td><td><input type="number" id="a_offline" value="13.966" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_offline" value="345675" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>PR</td><td><input type="number" id="a_pr" value="9.121" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_pr" value="615234" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>CSR</td><td><input type="number" id="a_csr" value="4.088" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_csr" value="118615" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>TV</td><td><input type="number" id="a_tv" value="12.1952" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_tv" value="229392" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>Online</td><td><input type="number" id="a_online" value="24.2133" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_online" value="241816" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>Offline</td><td><input type="number" id="a_offline" value="14.0718" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_offline" value="350207" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>PR</td><td><input type="number" id="a_pr" value="8.9994" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_pr" value="607109" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>CSR</td><td><input type="number" id="a_csr" value="4.0737" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_csr" value="117726" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
     </table>
   </div>
 </div>
@@ -175,10 +175,10 @@ const CH_COLORS = { tv: '#e94560', online: '#4caf50', offline: '#2196f3', pr: '#
 const PRESETS = {
   'selejtező_A': {
     name: 'Selejtező 1. régió, Piac A',
-    note: 'R²=0.99980, 100 mérés, 2026-03-27 — 100k-500k RMSE=0.087',
+    note: 'R²=0.99987, 660 mérés, 2026-03-27 — 100k-500k RMSE=0.047, max=0.17',
     base: 22.27,
-    a: { tv: 11.994, online: 24.790, offline: 13.966, pr: 9.121, csr: 4.088 },
-    K: { tv: 222948, online: 251724, offline: 345675, pr: 615234, csr: 118615 },
+    a: { tv: 12.1952, online: 24.2133, offline: 14.0718, pr: 8.9994, csr: 4.0737 },
+    K: { tv: 229392, online: 241816, offline: 350207, pr: 607109, csr: 117726 },
     defaults: { tv: 180000, online: 95000, offline: 105000, pr: 22000, csr: 18000 }
   },
   'teszt_H': {
