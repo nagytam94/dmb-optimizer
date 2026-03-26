@@ -266,6 +266,59 @@ tr:hover td { background: #1a1a3e; }
     </div>
 </div>
 
+<!-- PIAC BEALLITASOK -->
+<div class="card" style="border: 2px solid #f5a623; margin-bottom: 30px;">
+  <h3 style="color:#f5a623; margin-bottom: 8px;">Piac beallitasok</h3>
+  <p style="color:#888; font-size:13px; margin-bottom:12px;">Allitsd be az aktualis piac sulyait (a Marka faktorok tortadiagrambol). Az osszegnek 100-nak kell lennie.</p>
+
+  <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin-bottom:15px;">
+    <div style="text-align:center;">
+      <label style="font-size:12px; color:#aaa;">TV</label><br>
+      <input type="number" id="wTV" value="20" min="0" max="100" style="width:60px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+      <div style="font-size:11px; color:#888;">%</div>
+    </div>
+    <div style="text-align:center;">
+      <label style="font-size:12px; color:#aaa;">Online</label><br>
+      <input type="number" id="wOnline" value="40" min="0" max="100" style="width:60px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+      <div style="font-size:11px; color:#888;">%</div>
+    </div>
+    <div style="text-align:center;">
+      <label style="font-size:12px; color:#aaa;">Offline</label><br>
+      <input type="number" id="wOffline" value="20" min="0" max="100" style="width:60px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+      <div style="font-size:11px; color:#888;">%</div>
+    </div>
+    <div style="text-align:center;">
+      <label style="font-size:12px; color:#aaa;">PR</label><br>
+      <input type="number" id="wPR" value="12" min="0" max="100" style="width:60px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+      <div style="font-size:11px; color:#888;">%</div>
+    </div>
+    <div style="text-align:center;">
+      <label style="font-size:12px; color:#aaa;">CSR</label><br>
+      <input type="number" id="wCSR" value="8" min="0" max="100" style="width:60px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+      <div style="font-size:11px; color:#888;">%</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+    <div>
+      <label style="font-size:12px; color:#aaa;">Base marka%</label><br>
+      <input type="number" id="wBase" value="17.55" step="0.1" style="width:80px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+    </div>
+    <div>
+      <label style="font-size:12px; color:#aaa;">Total max</label><br>
+      <input type="number" id="wTotalMax" value="63.19" step="0.1" style="width:80px; text-align:center; background:#0f3460; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;" onchange="updateWeights()">
+    </div>
+    <div>
+      <span id="weightSum" style="font-size:16px; font-weight:700; color:#4caf50;">100</span>
+      <span style="font-size:12px; color:#888;">/100</span>
+    </div>
+    <div>
+      <button onclick="setPreset('tesztH')" style="background:#444; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; margin:2px;">Teszt H</button>
+      <button onclick="setPreset('selejtező')" style="background:#f5a623; color:#000; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; margin:2px;">Selejtező A</button>
+    </div>
+  </div>
+</div>
+
 <!-- OPTIMIZER -->
 <div class="optimizer">
     <h2>Budget Optimizer</h2>
@@ -333,6 +386,42 @@ const singleMeasured = {"tv": [{"x": 0, "y": 24.46, "name": "prop_0"}, {"x": 0, 
 const chColors = {tv:'#ff6384', online:'#36a2eb', offline:'#ffce56', pr:'#4bc0c0', csr:'#9966ff'};
 const chNames = ['tv','online','offline','pr','csr'];
 
+// K values (saturation speed per channel - CONSTANT across games)
+const K_VALUES = {tv: 241000, online: 124000, offline: 327000, pr: 2181000, csr: 2265000};
+
+// Presets
+const PRESETS = {
+  'teszt': {weights: {tv:20, online:40, offline:20, pr:12, csr:8}, base: 17.55, totalMax: 63.19, name: 'Selejtező A'},
+  'selejtező': {weights: {tv:20, online:40, offline:20, pr:12, csr:8}, base: 17.55, totalMax: 63.19, name: 'Selejtező A'},
+  'tesztH': {weights: {tv:35, online:25, offline:25, pr:8, csr:7}, base: 24.6, totalMax: 46.3, name: 'Teszt H'},
+};
+
+function getWeights() {
+  return {
+    tv: parseFloat(document.getElementById('wTV').value) / 100,
+    online: parseFloat(document.getElementById('wOnline').value) / 100,
+    offline: parseFloat(document.getElementById('wOffline').value) / 100,
+    pr: parseFloat(document.getElementById('wPR').value) / 100,
+    csr: parseFloat(document.getElementById('wCSR').value) / 100,
+  };
+}
+function getBase() { return parseFloat(document.getElementById('wBase').value) || 17.55; }
+function getTotalMax() { return parseFloat(document.getElementById('wTotalMax').value) || 63.19; }
+
+function calcBrandFull(tv, online, offline, pr, csr) {
+  const w = getWeights();
+  const base = getBase();
+  const tmax = getTotalMax();
+  let sum = 0;
+  sum += w.tv * (1 - Math.exp(-tv / K_VALUES.tv));
+  sum += w.online * (1 - Math.exp(-online / K_VALUES.online));
+  sum += w.offline * (1 - Math.exp(-offline / K_VALUES.offline));
+  sum += w.pr * (1 - Math.exp(-pr / K_VALUES.pr));
+  sum += w.csr * (1 - Math.exp(-csr / K_VALUES.csr));
+  return base + tmax * sum;
+}
+
+// Keep original brandModel for charts (uses fitted params)
 function brandModel(tv, on, off, pr, csr) {
     return P.base
         + P.a_tv * (1 - Math.exp(-tv / P.k_tv))
@@ -342,11 +431,34 @@ function brandModel(tv, on, off, pr, csr) {
         + P.a_csr * (1 - Math.exp(-csr / P.k_csr));
 }
 
-// Marginal value (derivative) for channel
+function updateWeights() {
+  const w = getWeights();
+  const sum = Math.round((w.tv + w.online + w.offline + w.pr + w.csr) * 100);
+  const el = document.getElementById('weightSum');
+  el.textContent = sum;
+  el.style.color = sum === 100 ? '#4caf50' : '#e94560';
+  runOptimizer();
+}
+
+function setPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  document.getElementById('wTV').value = p.weights.tv;
+  document.getElementById('wOnline').value = p.weights.online;
+  document.getElementById('wOffline').value = p.weights.offline;
+  document.getElementById('wPR').value = p.weights.pr;
+  document.getElementById('wCSR').value = p.weights.csr;
+  document.getElementById('wBase').value = p.base;
+  document.getElementById('wTotalMax').value = p.totalMax;
+  updateWeights();
+}
+
+// Marginal value (derivative) for channel — uses weights and totalMax
 function marginal(ch, x) {
-    const params = {tv:[P.a_tv,P.k_tv], online:[P.a_on,P.k_on], offline:[P.a_off,P.k_off], pr:[P.a_pr,P.k_pr], csr:[P.a_csr,P.k_csr]};
-    const [a, k] = params[ch];
-    return (a / k) * Math.exp(-x / k);
+    const w = getWeights();
+    const tmax = getTotalMax();
+    const wMap = {tv: w.tv, online: w.online, offline: w.offline, pr: w.pr, csr: w.csr};
+    return (tmax * wMap[ch] / K_VALUES[ch]) * Math.exp(-x / K_VALUES[ch]);
 }
 
 // Greedy optimizer: allocate in small steps to highest marginal channel
@@ -367,7 +479,7 @@ function runOptimizer() {
         remaining -= add;
     }
 
-    const brand = brandModel(alloc.tv, alloc.online, alloc.offline, alloc.pr, alloc.csr);
+    const brand = calcBrandFull(alloc.tv, alloc.online, alloc.offline, alloc.pr, alloc.csr);
 
     for (const ch of chNames) {
         document.getElementById('res-' + ch).textContent = formatK(alloc[ch]);
@@ -394,7 +506,7 @@ function updateSliders() {
         total += vals[ch];
         document.getElementById('sv-' + ch).textContent = formatK(vals[ch]);
     }
-    const brand = brandModel(vals.tv, vals.online, vals.offline, vals.pr, vals.csr);
+    const brand = calcBrandFull(vals.tv, vals.online, vals.offline, vals.pr, vals.csr);
     document.getElementById('sliderTotal').textContent = total.toLocaleString();
     document.getElementById('sliderBrand').textContent = brand.toFixed(2) + '%';
 }
@@ -534,4 +646,3 @@ runOptimizer();
 </script>
 </body>
 </html>
-<!-- built 2026 Már 24 Ked 14:42:51 EET -->
