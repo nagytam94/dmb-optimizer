@@ -248,7 +248,8 @@ function toggleParams() {
 // === OPTIMIZER ===
 function runOptimizer() {
   const budget = getBudget();
-  const step = Math.max(1, Math.round(budget / 1000));
+  // Fine step greedy, then round to 1000s
+  const step = 1000;
   const alloc = {};
   CHANNELS.forEach(ch => alloc[ch] = 0);
 
@@ -263,13 +264,17 @@ function runOptimizer() {
     alloc[bestCh] += step;
     remaining -= step;
   }
-  if (remaining > 0) {
+
+  // Round to nearest 1000 (already is, since step=1000)
+  // But ensure total matches budget by adjusting best channel
+  let total = CHANNELS.reduce((s, ch) => s + alloc[ch], 0);
+  if (total < budget) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
       const m = marginalValue(ch, alloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
-    if (bestCh) alloc[bestCh] += remaining;
+    if (bestCh) alloc[bestCh] += budget - total;
   }
 
   optimalAlloc = { ...alloc };
@@ -287,7 +292,7 @@ function runOptimizer() {
     </div>`;
   }).join('');
 
-  document.getElementById('optBrandVal').textContent = optimalBrand.toFixed(2) + '%';
+  document.getElementById('optBrandVal').textContent = optimalBrand.toFixed(1) + '%';
 
   // Sync sliders
   CHANNELS.forEach(ch => {
@@ -319,11 +324,11 @@ function updateManual() {
   });
   document.getElementById('manualTotal').textContent = total.toLocaleString('hu');
   const bp = brandPercent(spends);
-  document.getElementById('manualBrand').textContent = bp.toFixed(2) + '%';
+  document.getElementById('manualBrand').textContent = bp.toFixed(1) + '%';
 
   const delta = bp - optimalBrand;
   const deltaEl = document.getElementById('manualDelta');
-  deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2) + '%';
+  deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%';
   deltaEl.style.color = delta >= -0.01 ? '#4caf50' : '#e94560';
 }
 
