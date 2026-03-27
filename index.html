@@ -251,9 +251,9 @@ function runOptimizer() {
   // Greedy with step=1 for exact optimum
   const alloc = {};
   CHANNELS.forEach(ch => alloc[ch] = 0);
-  // Coarse pass (step=1000) then fine pass (step=1)
+  // Multi-resolution greedy: coarse→fine
   let remaining = budget;
-  for (const step of [1000, 1]) {
+  for (const step of [10000, 1000, 100, 1]) {
     while (remaining >= step) {
       let bestCh = null, bestMarg = -1;
       CHANNELS.forEach(ch => {
