@@ -251,17 +251,50 @@ function runOptimizer() {
   // Greedy with step=1 for exact optimum
   const alloc = {};
   CHANNELS.forEach(ch => alloc[ch] = 0);
-  // Pure step=1 greedy for exact optimum
-  let remaining = budget;
-  while (remaining > 0) {
+  // Analytical optimizer: at optimum, marginal values are equal across active channels
+  // marginal(ch) = a/K * exp(-x/K) = λ  →  x = -K * ln(λ*K/a)
+  // Find λ such that Σ x_i = budget (binary search)
+  let lo = 0, hi = Math.max(...CHANNELS.map(ch => getA(ch) / getK(ch)));
+  for (let iter = 0; iter < 100; iter++) {
+    const lambda = (lo + hi) / 2;
+    let total = 0;
+    CHANNELS.forEach(ch => {
+      const a = getA(ch), k = getK(ch);
+      const x = -k * Math.log(lambda * k / a);
+      total += Math.max(0, Math.round(x));
+    });
+    if (total > budget) lo = lambda; else hi = lambda;
+  }
+  const lambda = (lo + hi) / 2;
+  let total = 0;
+  CHANNELS.forEach(ch => {
+    const a = getA(ch), k = getK(ch);
+    const x = -k * Math.log(lambda * k / a);
+    alloc[ch] = Math.max(0, Math.round(x));
+    total += alloc[ch];
+  });
+  // Adjust rounding error: add/remove 1 from best marginal channel
+  while (total > budget) {
+    let worstCh = null, worstMarg = Infinity;
+    CHANNELS.forEach(ch => {
+      if (alloc[ch] > 0) {
+        const m = marginalValue(ch, alloc[ch] - 1);
+        if (m < worstMarg) { worstMarg = m; worstCh = ch; }
+      }
+    });
+    if (!worstCh) break;
+    alloc[worstCh]--;
+    total--;
+  }
+  while (total < budget) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
       const m = marginalValue(ch, alloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
-    if (!bestCh || bestMarg <= 0) break;
+    if (!bestCh) break;
     alloc[bestCh]++;
-    remaining--;
+    total++;
   }
 
   optimalAlloc = { ...alloc };
