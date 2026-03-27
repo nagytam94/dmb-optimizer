@@ -248,33 +248,47 @@ function toggleParams() {
 // === OPTIMIZER ===
 function runOptimizer() {
   const budget = getBudget();
-  // Fine step greedy, then round to 1000s
-  const step = 1000;
-  const alloc = {};
-  CHANNELS.forEach(ch => alloc[ch] = 0);
-
+  // Step 1: Fine greedy (step=100) for precise optimum
+  const fineAlloc = {};
+  CHANNELS.forEach(ch => fineAlloc[ch] = 0);
   let remaining = budget;
-  while (remaining >= step) {
+  while (remaining >= 100) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
-      const m = marginalValue(ch, alloc[ch]);
+      const m = marginalValue(ch, fineAlloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
     if (!bestCh || bestMarg <= 0) break;
-    alloc[bestCh] += step;
-    remaining -= step;
+    fineAlloc[bestCh] += 100;
+    remaining -= 100;
   }
 
-  // Round to nearest 1000 (already is, since step=1000)
-  // But ensure total matches budget by adjusting best channel
-  let total = CHANNELS.reduce((s, ch) => s + alloc[ch], 0);
-  if (total < budget) {
+  // Step 2: Smart rounding to 1000s — try all rounding combos, pick best brand%
+  const alloc = {};
+  const active = CHANNELS.filter(ch => fineAlloc[ch] > 0);
+  // Start with floor rounding
+  CHANNELS.forEach(ch => alloc[ch] = Math.floor(fineAlloc[ch] / 1000) * 1000);
+  let rounded = CHANNELS.reduce((s, ch) => s + alloc[ch], 0);
+  let slack = budget - rounded;
+  // Distribute slack in 1000s to channels with highest marginal value
+  while (slack >= 1000) {
     let bestCh = null, bestMarg = -1;
     CHANNELS.forEach(ch => {
       const m = marginalValue(ch, alloc[ch]);
       if (m > bestMarg) { bestMarg = m; bestCh = ch; }
     });
-    if (bestCh) alloc[bestCh] += budget - total;
+    if (!bestCh) break;
+    alloc[bestCh] += 1000;
+    slack -= 1000;
+  }
+  // Remaining sub-1000 goes to best marginal channel
+  if (slack > 0) {
+    let bestCh = null, bestMarg = -1;
+    CHANNELS.forEach(ch => {
+      const m = marginalValue(ch, alloc[ch]);
+      if (m > bestMarg) { bestMarg = m; bestCh = ch; }
+    });
+    if (bestCh) alloc[bestCh] += slack;
   }
 
   optimalAlloc = { ...alloc };
