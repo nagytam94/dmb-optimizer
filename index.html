@@ -251,19 +251,17 @@ function runOptimizer() {
   // Greedy with step=1 for exact optimum
   const alloc = {};
   CHANNELS.forEach(ch => alloc[ch] = 0);
-  // Multi-resolution greedy: coarse→fine
+  // Pure step=1 greedy for exact optimum
   let remaining = budget;
-  for (const step of [10000, 1000, 100, 1]) {
-    while (remaining >= step) {
-      let bestCh = null, bestMarg = -1;
-      CHANNELS.forEach(ch => {
-        const m = marginalValue(ch, alloc[ch]);
-        if (m > bestMarg) { bestMarg = m; bestCh = ch; }
-      });
-      if (!bestCh || bestMarg <= 0) break;
-      alloc[bestCh] += step;
-      remaining -= step;
-    }
+  while (remaining > 0) {
+    let bestCh = null, bestMarg = -1;
+    CHANNELS.forEach(ch => {
+      const m = marginalValue(ch, alloc[ch]);
+      if (m > bestMarg) { bestMarg = m; bestCh = ch; }
+    });
+    if (!bestCh || bestMarg <= 0) break;
+    alloc[bestCh]++;
+    remaining--;
   }
 
   optimalAlloc = { ...alloc };
