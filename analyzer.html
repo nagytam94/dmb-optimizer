@@ -9,37 +9,38 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
+  background: #f5f3ef;
+  color: #2d2d2d;
   min-height: 100vh;
 }
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #1a1a2e; }
-::-webkit-scrollbar-thumb { background: #16213e; border-radius: 4px; }
+::-webkit-scrollbar-track { background: #eae7e1; }
+::-webkit-scrollbar-thumb { background: #c4bfb6; border-radius: 4px; }
 
 .header {
-  background: linear-gradient(135deg, #16213e, #0f3460);
+  background: #fff;
   padding: 20px 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #e94560;
+  border-bottom: 2px solid #2d6a4f;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.header h1 { font-size: 24px; color: #fff; }
-.header h1 span { color: #e94560; }
+.header h1 { font-size: 24px; color: #1b1b1b; font-weight: 700; }
+.header h1 span { color: #d4763a; }
 .period-selector {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.period-selector label { color: #aaa; font-size: 14px; }
+.period-selector label { color: #666; font-size: 14px; }
 .period-selector select {
-  background: #1a1a2e;
-  color: #fff;
-  border: 1px solid #e94560;
+  background: #fff;
+  color: #2d2d2d;
+  border: 1px solid #2d6a4f;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
 }
 
@@ -49,18 +50,19 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  border: 3px dashed #e94560;
+  border: 3px dashed #2d6a4f;
   border-radius: 20px;
   margin: 40px;
   padding: 60px;
   transition: all 0.3s;
   cursor: pointer;
+  background: #fff;
 }
 .drop-zone.dragover {
-  background: rgba(233,69,96,0.1);
-  border-color: #4caf50;
+  background: rgba(45,106,79,0.05);
+  border-color: #d4763a;
 }
-.drop-zone h2 { font-size: 28px; margin-bottom: 15px; color: #e94560; }
+.drop-zone h2 { font-size: 28px; margin-bottom: 15px; color: #2d6a4f; }
 .drop-zone p { font-size: 16px; color: #888; }
 .drop-zone input { display: none; }
 
@@ -71,19 +73,21 @@ body {
   gap: 20px;
 }
 .panel {
-  background: #16213e;
-  border-radius: 12px;
+  background: #fff;
+  border-radius: 14px;
   padding: 20px;
-  border: 1px solid #0f3460;
+  border: 1px solid #e0ddd7;
   overflow-x: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .panel.full { grid-column: 1 / -1; }
 .panel h3 {
-  color: #e94560;
+  color: #2d6a4f;
   margin-bottom: 15px;
   font-size: 18px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid #e0ddd7;
   padding-bottom: 8px;
+  font-weight: 700;
 }
 
 table {
@@ -94,29 +98,29 @@ table {
 th, td {
   padding: 8px 10px;
   text-align: right;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid #eae7e1;
 }
-th { color: #e94560; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+th { color: #2d6a4f; font-weight: 600; font-size: 12px; text-transform: uppercase; }
 td:first-child, th:first-child { text-align: left; }
-tr:hover { background: rgba(233,69,96,0.05); }
+tr:hover { background: rgba(45,106,79,0.04); }
 
-.jtr-col { background: rgba(245,166,35,0.08); }
-.jtr-highlight { border: 2px solid #f5a623 !important; }
-.pos { color: #4caf50; }
-.neg { color: #e94560; }
-.neutral { color: #f5a623; }
+.jtr-col { background: rgba(212,118,58,0.08); }
+.jtr-highlight { border: 2px solid #d4763a !important; }
+.pos { color: #2d6a4f; }
+.neg { color: #c0392b; }
+.neutral { color: #d4763a; }
 .alert-box {
-  background: rgba(233,69,96,0.15);
-  border: 1px solid #e94560;
-  border-radius: 8px;
+  background: rgba(192,57,43,0.08);
+  border: 1px solid #c0392b;
+  border-radius: 10px;
   padding: 12px 16px;
   margin: 10px 0;
   font-size: 13px;
 }
 .good-box {
-  background: rgba(76,175,80,0.15);
-  border: 1px solid #4caf50;
-  border-radius: 8px;
+  background: rgba(45,106,79,0.08);
+  border: 1px solid #2d6a4f;
+  border-radius: 10px;
   padding: 12px 16px;
   margin: 10px 0;
   font-size: 13px;
@@ -124,20 +128,20 @@ tr:hover { background: rgba(233,69,96,0.05); }
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
 }
-.badge-green { background: rgba(76,175,80,0.2); color: #4caf50; }
-.badge-red { background: rgba(233,69,96,0.2); color: #e94560; }
-.badge-yellow { background: rgba(245,166,35,0.2); color: #f5a623; }
+.badge-green { background: rgba(45,106,79,0.12); color: #2d6a4f; }
+.badge-red { background: rgba(192,57,43,0.12); color: #c0392b; }
+.badge-yellow { background: rgba(212,118,58,0.12); color: #d4763a; }
 
 .chart-container { position: relative; height: 350px; margin-top: 10px; }
 .chart-container-sm { position: relative; height: 280px; margin-top: 10px; }
 
 .source-bar {
   display: flex;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   height: 40px;
   margin: 8px 0;
@@ -160,16 +164,16 @@ tr:hover { background: rgba(233,69,96,0.05); }
   gap: 10px;
 }
 .decision-card {
-  background: rgba(0,0,0,0.2);
-  border-radius: 8px;
+  background: #f9f7f4;
+  border-radius: 10px;
   padding: 12px;
   border-left: 4px solid;
 }
-.decision-card.good { border-left-color: #4caf50; }
-.decision-card.bad { border-left-color: #e94560; }
-.decision-card.meh { border-left-color: #f5a623; }
-.decision-card .field { font-size: 13px; font-weight: 600; color: #fff; }
-.decision-card .vals { font-size: 12px; color: #aaa; margin-top: 4px; }
+.decision-card.good { border-left-color: #2d6a4f; }
+.decision-card.bad { border-left-color: #c0392b; }
+.decision-card.meh { border-left-color: #d4763a; }
+.decision-card .field { font-size: 13px; font-weight: 600; color: #1b1b1b; }
+.decision-card .vals { font-size: 12px; color: #777; margin-top: 4px; }
 .decision-card .impact { font-size: 12px; margin-top: 4px; font-weight: 600; }
 
 /* Info button & modal */
@@ -180,9 +184,9 @@ tr:hover { background: rgba(233,69,96,0.05); }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #0f3460;
-  border: 1px solid #e94560;
-  color: #e94560;
+  background: #2d6a4f;
+  border: 1px solid #c0392b;
+  color: #c0392b;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -190,7 +194,7 @@ tr:hover { background: rgba(233,69,96,0.05); }
   vertical-align: middle;
   user-select: none;
 }
-.info-btn:hover { background: #e94560; color: #fff; }
+.info-btn:hover { background: #c0392b; color: #fff; }
 
 .info-modal-overlay {
   display: none;
@@ -204,8 +208,8 @@ tr:hover { background: rgba(233,69,96,0.05); }
 .info-modal-overlay.active { display: flex; }
 
 .info-modal {
-  background: #16213e;
-  border: 2px solid #e94560;
+  background: #f9f7f4;
+  border: 2px solid #c0392b;
   border-radius: 12px;
   padding: 24px;
   max-width: 500px;
@@ -213,10 +217,10 @@ tr:hover { background: rgba(233,69,96,0.05); }
   color: #e0e0e0;
   position: relative;
 }
-.info-modal h4 { color: #e94560; margin-bottom: 12px; font-size: 16px; }
+.info-modal h4 { color: #c0392b; margin-bottom: 12px; font-size: 16px; }
 .info-modal p { font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
 .info-modal .formula {
-  background: #0f3460;
+  background: #2d6a4f;
   padding: 12px;
   border-radius: 8px;
   font-family: monospace;
@@ -228,13 +232,13 @@ tr:hover { background: rgba(233,69,96,0.05); }
   position: absolute;
   top: 12px; right: 16px;
   background: none; border: none;
-  color: #e94560; font-size: 24px;
+  color: #c0392b; font-size: 24px;
   cursor: pointer;
 }
 
 /* Game Info Bar */
 #gameInfo {
-  background: #0f3460;
+  background: #2d6a4f;
   padding: 10px 30px;
   font-size: 14px;
   display: none;
@@ -259,9 +263,9 @@ tr:hover { background: rgba(233,69,96,0.05); }
   color: #aaa;
 }
 .hr-slider-item input[type=number] {
-  background: #1a1a2e;
+  background: #f5f3ef;
   color: #fff;
-  border: 1px solid #0f3460;
+  border: 1px solid #2d6a4f;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 14px;
@@ -269,7 +273,7 @@ tr:hover { background: rgba(233,69,96,0.05); }
 }
 .hr-slider-item input[type=range] {
   width: 100%;
-  accent-color: #e94560;
+  accent-color: #c0392b;
 }
 .hr-result-grid {
   display: grid;
@@ -333,9 +337,9 @@ tr:hover { background: rgba(233,69,96,0.05); }
   color: #aaa;
 }
 .calc-item input[type=number] {
-  background: #1a1a2e;
+  background: #f5f3ef;
   color: #fff;
-  border: 1px solid #0f3460;
+  border: 1px solid #2d6a4f;
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -343,7 +347,7 @@ tr:hover { background: rgba(233,69,96,0.05); }
 }
 .calc-item input[type=range] {
   width: 100%;
-  accent-color: #e94560;
+  accent-color: #c0392b;
 }
 .calc-item .calc-val {
   font-size: 12px;
@@ -351,7 +355,7 @@ tr:hover { background: rgba(233,69,96,0.05); }
   text-align: center;
 }
 .sim-result {
-  background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(233,69,96,0.1));
+  background: linear-gradient(135deg, rgba(245,166,35,0.15), rgba(192,57,43,0.06));
   border: 2px solid #f5a623;
   border-radius: 12px;
   padding: 20px;
@@ -368,7 +372,7 @@ tr:hover { background: rgba(233,69,96,0.05); }
 .comp-table .comp-new { color: #f5a623; font-weight: 600; }
 
 button {
-  background: #e94560;
+  background: #c0392b;
   color: white;
   border: none;
   padding: 8px 20px;
@@ -384,7 +388,7 @@ button:hover { background: #c73850; }
   .calc-group { grid-template-columns: 1fr; }
 }
 </style>
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#f5f3ef">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DMB Analyzer">
@@ -399,17 +403,17 @@ button:hover { background: #c73850; }
     <select id="periodSelect" onchange="switchPeriod(this.value)"></select>
   </div>
   <div style="display:flex; gap:8px;">
-    <a href="https://edu.ecosim.hu/courses" target="_blank" style="background:#2196f3; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">🎮 Játékplatform →</a>
-    <a href="https://nagytam94.github.io/dmb-optimizer/" target="_blank" style="background:#e94560; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">Marketing Kalkulátor →</a>
-    <a href="https://nagytam94.github.io/dmb-optimizer/hr.html" target="_blank" style="background:#4caf50; color:#fff; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">HR Optimalizátor →</a>
-    <button id="pwaInstallBtn" style="display:none; background:#4caf50; color:#fff; padding:8px 16px; border-radius:6px; border:none; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">📲 Telepítés</button>
+    <a href="https://edu.ecosim.hu/courses" target="_blank" style="background:#2196f3; color:#1b1b1b; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">🎮 Játékplatform →</a>
+    <a href="https://nagytam94.github.io/dmb-optimizer/" target="_blank" style="background:#c0392b; color:#1b1b1b; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">Marketing Kalkulátor →</a>
+    <a href="https://nagytam94.github.io/dmb-optimizer/hr.html" target="_blank" style="background:#4caf50; color:#1b1b1b; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap;">HR Optimalizátor →</a>
+    <button id="pwaInstallBtn" style="display:none; background:#4caf50; color:#1b1b1b; padding:8px 16px; border-radius:6px; border:none; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">📲 Telepítés</button>
   </div>
 </div>
 
 <div id="gameInfo">
   <span id="gameType"></span>
   <span id="gameRounds"></span>
-  <span id="gameWarning" style="color:#e94560; font-weight:bold;"></span>
+  <span id="gameWarning" style="color:#c0392b; font-weight:bold;"></span>
 </div>
 
 <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -482,6 +486,18 @@ button:hover { background: #c73850; }
     <div class="panel full" id="panelSim">
       <h3>RV Kalkulator</h3>
       <div id="simContent"></div>
+    </div>
+
+    <!-- Panel 9: Várható Kereslet & Preferencia -->
+    <div class="panel full" id="panelKereslet">
+      <h3>Várható Kereslet & Vásárlói Preferencia</h3>
+      <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+        <button onclick="loadDefaultKereslet()" style="background:#2d6a4f;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;">A piac P0 (alapértelmezett)</button>
+        <button onclick="document.getElementById('keresletJsonInput').click()" style="background:#2d6a4f;color:#1b1b1b;border:1px solid #c0392b;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">JSON feltöltés</button>
+        <button onclick="scanKeresletFromGame()" style="background:#2d6a4f;color:#1b1b1b;border:1px solid #4caf50;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">📋 Beillesztés (scan kimenet)</button>
+        <input type="file" id="keresletJsonInput" accept=".json" style="display:none" onchange="loadKeresletJson(event)">
+      </div>
+      <div id="keresletContent" style="color:#888;font-size:14px;">Tölts be adatot a fenti gombokkal, vagy használd az alapértelmezettet.</div>
     </div>
   </div>
 </div>
@@ -871,7 +887,7 @@ function renderRVScoreboard(rows) {
 
   compRows.forEach(cr => {
     if(!cr.key) {
-      html += `<tr><td colspan="6" style="color:#e94560; font-weight:600; padding-top:12px;">${cr.label}</td></tr>`;
+      html += `<tr><td colspan="6" style="color:#c0392b; font-weight:600; padding-top:12px;">${cr.label}</td></tr>`;
       return;
     }
     html += '<tr>';
@@ -883,13 +899,13 @@ function renderRVScoreboard(rows) {
       const cls = i===JTR ? 'jtr-col' : '';
       let color = '';
       if(i === JTR && cr.key !== 'bunteto' && cr.key !== 'rangsor') {
-        color = jtrV > othAvg ? 'color:#4caf50' : jtrV < othAvg ? 'color:#e94560' : '';
+        color = jtrV > othAvg ? 'color:#4caf50' : jtrV < othAvg ? 'color:#c0392b' : '';
       }
       if(i === JTR && cr.key === 'bunteto') {
-        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#e94560' : '';
+        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#c0392b' : '';
       }
       if(i === JTR && cr.key === 'rangsor') {
-        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#e94560' : '';
+        color = jtrV < othAvg ? 'color:#4caf50' : jtrV > othAvg ? 'color:#c0392b' : '';
       }
       const style = i===JTR ? `style="border-left:2px solid #f5a623; border-right:2px solid #f5a623; ${color}"` : '';
       html += `<td class="${cls}" ${style}>${Math.abs(v) >= 1000 ? fmtN(v, cr.dec) : v.toFixed(cr.dec)}</td>`;
@@ -898,14 +914,14 @@ function renderRVScoreboard(rows) {
   });
 
   // Verification row
-  html += `<tr style="border-top:2px solid #e94560;"><td><strong>Verifikáció</strong></td>`;
+  html += `<tr style="border-top:2px solid #c0392b;"><td><strong>Verifikáció</strong></td>`;
   TEAMS.forEach((t,i) => {
     const d = rvData[i];
     const vDiff = Math.abs(d.rv - d.calcedRV);
     const ok = vDiff < 0.5;
     const cls = i===JTR ? 'jtr-col' : '';
     const style = i===JTR ? 'style="border-left:2px solid #f5a623; border-right:2px solid #f5a623;"' : '';
-    html += `<td class="${cls}" ${style}><span style="color:${ok ? '#4caf50' : '#e94560'};">${ok ? '&#10003;' : '&#10007;'} ${vDiff.toFixed(2)}</span></td>`;
+    html += `<td class="${cls}" ${style}><span style="color:${ok ? '#4caf50' : '#c0392b'};">${ok ? '&#10003;' : '&#10007;'} ${vDiff.toFixed(2)}</span></td>`;
   });
   html += '</tr>';
   html += '</table>';
@@ -1095,8 +1111,8 @@ function renderHitelPortfolio(rows) {
   });
 
   // ÖSSZESEN sor
-  html += '<tr style="border-top:2px solid #e94560; font-weight:700;">';
-  html += '<td style="color:#e94560;">ÖSSZESEN</td>';
+  html += '<tr style="border-top:2px solid #c0392b; font-weight:700;">';
+  html += '<td style="color:#c0392b;">ÖSSZESEN</td>';
   let totalBehajtJtr = 0, totalAllJtr = 0;
   TEAMS.forEach((t,i) => {
     let sum = 0;
@@ -1180,7 +1196,7 @@ function renderHitelBetetArany(rows) {
 
   teamData.forEach((d, i) => {
     const isJtr = i === JTR;
-    const border = isJtr ? 'border:2px solid #f5a623;' : 'border:1px solid #0f3460;';
+    const border = isJtr ? 'border:2px solid #f5a623;' : 'border:1px solid #2d6a4f;';
     const total = d.hitel + d.betet;
     const hitelPct = total > 0 ? (d.hitel / total * 100) : 50;
     const betetPct = total > 0 ? (d.betet / total * 100) : 50;
@@ -1195,15 +1211,15 @@ function renderHitelBetetArany(rows) {
 
     // Stats
     html += `<div style="margin-top:10px; font-size:12px; line-height:1.8;">`;
-    html += `<div>Hitel: <strong style="color:#e94560;">${fmt(d.hitel)}</strong></div>`;
+    html += `<div>Hitel: <strong style="color:#c0392b;">${fmt(d.hitel)}</strong></div>`;
     html += `<div>Betét: <strong style="color:#4caf50;">${fmt(d.betet)}</strong></div>`;
     const hitelPctDisp = total > 0 ? Math.round(d.hitel / total * 100) : 50;
     const betetPctDisp = total > 0 ? Math.round(d.betet / total * 100) : 50;
-    html += `<div style="font-size:16px; font-weight:700; margin:4px 0;"><span style="color:#e94560;">${hitelPctDisp}</span> : <span style="color:#4caf50;">${betetPctDisp}</span></div>`;
+    html += `<div style="font-size:16px; font-weight:700; margin:4px 0;"><span style="color:#c0392b;">${hitelPctDisp}</span> : <span style="color:#4caf50;">${betetPctDisp}</span></div>`;
     html += `<div style="font-size:10px; color:#888;">hitel : betét</div>`;
 
     if (d.hiany > 0) {
-      html += `<div style="margin-top:6px; padding:4px 8px; background:rgba(233,69,96,0.15); border-radius:4px; color:#e94560; font-weight:600;">`;
+      html += `<div style="margin-top:6px; padding:4px 8px; background:rgba(233,69,96,0.15); border-radius:4px; color:#c0392b; font-weight:600;">`;
       html += `Hiány: ${fmt(d.hiany)}`;
       html += `<br>BK ktg: ~${fmtN(Math.round(d.bkKtg))}/év`;
       html += `</div>`;
@@ -1297,7 +1313,7 @@ function renderBetetForras(rows) {
   });
 
   // Összesítő sor
-  html += '<tr style="border-top:2px solid #e94560; font-weight:600;"><td>Összes betét</td>';
+  html += '<tr style="border-top:2px solid #c0392b; font-weight:600;"><td>Összes betét</td>';
   TEAMS.forEach((t,i) => {
     const cls = i===JTR ? 'jtr-col' : '';
     const style = i===JTR ? 'style="border-left:2px solid #f5a623; border-right:2px solid #f5a623; color:#f5a623;"' : '';
@@ -1337,7 +1353,7 @@ function renderBetetForras(rows) {
   const bankkoziKoveteles = rBankkoziKov2 > -1 ? jtrVal(rows, rBankkoziKov2) : 0;
   const bankkoziTartozas = rBankkoziTart2 > -1 ? jtrVal(rows, rBankkoziTart2) : Math.max(0, teljHitel + penz - teljBetet);
 
-  html += `<h4 style="color:#e94560; margin-top:15px;">Forrás-Felhasználás (JTR) ${infoBtn(INFO.bankkozi.title, INFO.bankkozi.content)}</h4>`;
+  html += `<h4 style="color:#c0392b; margin-top:15px;">Forrás-Felhasználás (JTR) ${infoBtn(INFO.bankkozi.title, INFO.bankkozi.content)}</h4>`;
 
   const totalForrás = teljBetet + bankkoziTartozas;
 
@@ -1349,8 +1365,8 @@ function renderBetetForras(rows) {
     html += `<div style="font-size:13px; color:#aaa; margin:5px 0;">Források:</div>`;
     html += `<div class="source-bar">`;
     html += `<div style="width:${betetPct}%; background:#4caf50;">Betét ${betetPct.toFixed(0)}%</div>`;
-    if(bkPct > 1) html += `<div style="width:${Math.max(bkPct,5)}%; background:#e94560;">Bankközi ${bkPct.toFixed(0)}%</div>`;
-    html += `<div style="width:${Math.max(egyebPct,5)}%; background:#0f3460;">Saját tőke ${egyebPct.toFixed(0)}%</div>`;
+    if(bkPct > 1) html += `<div style="width:${Math.max(bkPct,5)}%; background:#c0392b;">Bankközi ${bkPct.toFixed(0)}%</div>`;
+    html += `<div style="width:${Math.max(egyebPct,5)}%; background:#2d6a4f;">Saját tőke ${egyebPct.toFixed(0)}%</div>`;
     html += `</div>`;
 
     const hitelPct = (teljHitel / osszEsz * 100);
@@ -1361,7 +1377,7 @@ function renderBetetForras(rows) {
     html += `<div class="source-bar">`;
     html += `<div style="width:${hitelPct}%; background:#f5a623;">Hitelek ${hitelPct.toFixed(0)}%</div>`;
     html += `<div style="width:${Math.max(penzPct,5)}%; background:#2196f3;">Pénz ${penzPct.toFixed(0)}%</div>`;
-    if(egyebFPct > 1) html += `<div style="width:${egyebFPct}%; background:#0f3460;">Egyéb ${egyebFPct.toFixed(0)}%</div>`;
+    if(egyebFPct > 1) html += `<div style="width:${egyebFPct}%; background:#2d6a4f;">Egyéb ${egyebFPct.toFixed(0)}%</div>`;
     html += `</div>`;
   }
 
@@ -1707,7 +1723,7 @@ function renderViselkedes() {
   };
 
   // ===== 1. Döntési változások tábla =====
-  let html = '<h4 style="color:#e94560; margin-bottom:8px;">Döntési változások periódusról periódusra</h4>';
+  let html = '<h4 style="color:#c0392b; margin-bottom:8px;">Döntési változások periódusról periódusra</h4>';
   html += '<div style="overflow-x:auto;"><table>';
 
   // Header row 1: team names
@@ -1762,9 +1778,9 @@ function renderViselkedes() {
         let changeColor = '#e0e0e0';
         if (avgChange !== null && Math.abs(avgChange) > 0.001) {
           if (isPromo) {
-            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
           } else {
-            changeColor = avgChange < 0 ? '#4caf50' : '#e94560';
+            changeColor = avgChange < 0 ? '#4caf50' : '#c0392b';
           }
         }
 
@@ -1778,7 +1794,7 @@ function renderViselkedes() {
   }
 
   // Separator row
-  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #e94560; padding:2px;"></td></tr>`;
+  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
 
   // Render betét rows
   for (let bi = 0; bi < betetSearchNames.length; bi++) {
@@ -1804,10 +1820,10 @@ function renderViselkedes() {
         let changeColor = '#e0e0e0';
         if (avgChange !== null && Math.abs(avgChange) > 0.001) {
           if (isPromo) {
-            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
           } else {
             // Betét kamat: emelés (pozitív) = agresszív ügyfélszerzés = zöld, csökkentés = piros
-            changeColor = avgChange > 0 ? '#4caf50' : '#e94560';
+            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
           }
         }
 
@@ -1821,7 +1837,7 @@ function renderViselkedes() {
   }
 
   // Separator
-  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #e94560; padding:2px;"></td></tr>`;
+  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
 
   // Összesített mutatók
   const aggRows = [
@@ -1839,7 +1855,7 @@ function renderViselkedes() {
       const avgCh = changes.length > 0 ? avg(changes) : null;
       let color = '#e0e0e0';
       if (avgCh !== null && Math.abs(avgCh) > 0.1) {
-        color = avgCh > 0 ? '#4caf50' : '#e94560';
+        color = avgCh > 0 ? '#4caf50' : '#c0392b';
       }
       html += `<td colspan="3" style="${baseStyle} color:${color}; ${jtrBold} text-align:center;">${avgCh !== null ? (avgCh > 0 ? '+' : '') + avgCh.toFixed(1) + '%' : '-'}</td>`;
     });
@@ -1849,7 +1865,7 @@ function renderViselkedes() {
   html += '</table></div>';
 
   // ===== 2. Radar chart =====
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Stratégiai profil (radar)</h4>';
+  html += '<h4 style="color:#c0392b; margin:20px 0 8px;">Stratégiai profil (radar)</h4>';
   html += '<div style="max-width:700px; margin:0 auto;"><canvas id="viselkedesRadar" height="350"></canvas></div>';
 
   el.innerHTML = html;
@@ -1929,8 +1945,8 @@ function renderViselkedes() {
             beginAtZero: true,
             max: 100,
             ticks: { color: '#888', backdropColor: 'transparent', stepSize: 25 },
-            grid: { color: 'rgba(255,255,255,0.1)' },
-            angleLines: { color: 'rgba(255,255,255,0.1)' },
+            grid: { color: 'rgba(0,0,0,0.06)' },
+            angleLines: { color: 'rgba(0,0,0,0.06)' },
             pointLabels: { color: '#ccc', font: { size: 12 } },
           }
         },
@@ -2085,7 +2101,7 @@ function updateCalc() {
     comps.forEach(c => {
       const d = c.nw - c.cur;
       const dCls = Math.abs(d) < 0.005 ? '' : d >= 0 ? 'pos' : 'neg';
-      const bold = c.label === 'ÖSSZESEN' ? 'font-weight:700; border-top:2px solid #e94560;' : '';
+      const bold = c.label === 'ÖSSZESEN' ? 'font-weight:700; border-top:2px solid #c0392b;' : '';
       thtml += `<tr style="${bold}">`;
       thtml += `<td class="comp-label">${c.label}</td>`;
       thtml += `<td class="comp-cur">${c.cur.toFixed(2)}</td>`;
@@ -2136,7 +2152,7 @@ function calcHRCost(wage, hire, training, letszamStart, piaci) {
 }
 
 function kihasznColor(k) {
-  if (k > 100) return '#e94560';
+  if (k > 100) return '#c0392b';
   if (k > 95) return '#f5a623';
   if (k >= 85) return '#4caf50';
   return '#2196f3';
@@ -2236,7 +2252,7 @@ function renderEllenfelElemzes(rows) {
   let html = '';
 
   // 1. Összefoglaló tábla
-  html += '<h4 style="color:#e94560; margin-bottom:8px;">Visszaszámolt mutatók (minden csapat)</h4>';
+  html += '<h4 style="color:#c0392b; margin-bottom:8px;">Visszaszámolt mutatók (minden csapat)</h4>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Mutató</th>';
   TEAMS.forEach((t, i) => {
     const s = i === JTR ? 'style="background:#f5a623; color:#000;"' : '';
@@ -2273,7 +2289,7 @@ function renderEllenfelElemzes(rows) {
     const isJtr = i === JTR;
     const isDebt = t.bkPozicio > 0;
     let style = isJtr ? 'font-weight:700;' : '';
-    style += isDebt ? ' color:#e94560;' : ' color:#4caf50;';
+    style += isDebt ? ' color:#c0392b;' : ' color:#4caf50;';
     html += `<td style="${style}">${isDebt ? '+' : ''}${fmtN(Math.round(t.bkPozicio))} ${isDebt ? '(tartozás)' : '(követelés)'}</td>`;
   });
   html += '</tr>';
@@ -2281,7 +2297,7 @@ function renderEllenfelElemzes(rows) {
   html += '</table></div>';
 
   // 2. Kamatstratégia összehasonlítás
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Kamatstratégia — hiteltípusonként</h4>';
+  html += '<h4 style="color:#c0392b; margin:20px 0 8px;">Kamatstratégia — hiteltípusonként</h4>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Hiteltípus</th>';
   TEAMS.forEach((t, i) => {
     const s = i === JTR ? 'style="background:#f5a623; color:#000;"' : '';
@@ -2332,7 +2348,7 @@ function renderEllenfelElemzes(rows) {
 
   // 2b. Betétstratégia összehasonlítás
   const depTypes = ['Folyószámla betét', 'Rövid lejáratú betétek', 'Hosszú lejáratú betétek', 'Lakástakarékpénztári betét'];
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Betétstratégia — betéttípusonként</h4>';
+  html += '<h4 style="color:#c0392b; margin:20px 0 8px;">Betétstratégia — betéttípusonként</h4>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Betéttípus</th>';
   TEAMS.forEach((t, i) => {
     const s = i === JTR ? 'style="background:#f5a623; color:#000;"' : '';
@@ -2395,7 +2411,7 @@ function renderEllenfelElemzes(rows) {
     });
   });
 
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés — Hitelek</h4>';
+  html += '<h4 style="color:#c0392b; margin:20px 0 8px;">Piaci részesedés — Hitelek</h4>';
   html += '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px;">';
   loanTypes.forEach((lt, ltIdx) => {
     const canvasId = 'pieHitel_' + ltIdx;
@@ -2418,7 +2434,7 @@ function renderEllenfelElemzes(rows) {
     });
   });
 
-  html += '<h4 style="color:#e94560; margin:20px 0 8px;">Piaci részesedés — Betétek</h4>';
+  html += '<h4 style="color:#c0392b; margin:20px 0 8px;">Piaci részesedés — Betétek</h4>';
   html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px;">';
   depTypes.forEach((dt, dtIdx) => {
     const canvasId = 'pieBetet_' + dtIdx;
@@ -2567,6 +2583,185 @@ function applyHROptimal(wage, hire, training) {
   document.getElementById('hrTraining').value = training;
   document.getElementById('hrTraining_range').value = training;
   updateHR();
+}
+
+// ===== PANEL 9: VÁRHATÓ KERESLET & PREFERENCIA =====
+const DEFAULT_KERESLET = {
+  loans: {
+    "Folyószámlahitel":  {demand:[6496000,6368000], pref:{Kamat:28,Promóció:20,Jutalék:22,Márka:20,Díj:10}, p0:{kamat:21.0,promo:39000,jutalek:1.3,dij:0.7}, mat:1},
+    "Személyi kölcsön":  {demand:[14820000,15696000], pref:{Kamat:34,Promóció:16,Jutalék:25,Márka:15,Díj:10}, p0:{kamat:18.0,promo:155000,jutalek:1.4,dij:0.8}, mat:2},
+    "Jelzálog hitel":    {demand:[21348000,20744000], pref:{Kamat:40,Promóció:20,Jutalék:17,Márka:10,Díj:13}, p0:{kamat:9.1,promo:117000,jutalek:1.0,dij:0.5}, mat:4},
+    "Állami hitel":      {demand:[18256000,19160000], pref:{Kamat:50,Promóció:10,Jutalék:25,Márka:10,Díj:15}, p0:{kamat:7.5,promo:27000,jutalek:1.1,dij:0.4}, mat:3},
+    "Vállalati hitel":   {demand:[26056000,28773200], pref:{Kamat:45,Promóció:9,Jutalék:10,Márka:20,Díj:16}, p0:{kamat:7.5,promo:48000,jutalek:0.7,dij:0.6}, mat:2},
+  },
+  deposits: {
+    "Folyószámla betét":         {demand:[8896400,9523228], pref:{Kamat:30,Promóció:25,Jutalék:10,Márka:15,Díj:20}, p0:{kamat:1.35,promo:15000,jutalek:0.7,dij:0.3}, mat:1},
+    "Rövid lejáratú betétek":    {demand:[38048932,41946388], pref:{Kamat:42,Promóció:20,Jutalék:13,Márka:15,Díj:10}, p0:{kamat:2.4,promo:25000,jutalek:0.7,dij:0.4}, mat:2},
+    "Hosszú lejáratú betétek":   {demand:[33604000,38402120], pref:{Kamat:50,Promóció:15,Jutalék:10,Márka:10,Díj:15}, p0:{kamat:3.2,promo:65000,jutalek:0.6,dij:0.2}, mat:3},
+    "Lakástakarékpénztári betét": {demand:[9219520,10296760], pref:{Kamat:30,Promóció:20,Jutalék:20,Márka:20,Díj:10}, p0:{kamat:1.8,promo:12000,jutalek:0.6,dij:0.1}, mat:5},
+  },
+  meta: {source:"dmbscan A piac P0", date:"2026-03-30", bankkoziHitel:3.7, bankkoziHitelP2:3.5, bankoziBetet:0.9}
+};
+
+let keresletData = null;
+
+function loadDefaultKereslet() {
+  keresletData = DEFAULT_KERESLET;
+  renderKereslet();
+}
+
+function loadKeresletJson(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      keresletData = JSON.parse(e.target.result);
+      renderKereslet();
+    } catch(err) { alert('Hibás JSON: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function scanKeresletFromGame() {
+  const txt = prompt('Illeszd be a scan JSON kimenetet:');
+  if(!txt) return;
+  try {
+    keresletData = JSON.parse(txt);
+    renderKereslet();
+  } catch(err) { alert('Hibás JSON: ' + err.message); }
+}
+
+function renderKereslet() {
+  if(!keresletData) return;
+  const el = document.getElementById('keresletContent');
+  const bk = keresletData.meta?.bankkoziHitel || 3.7;
+
+  let html = `<div style="margin-bottom:10px;font-size:12px;color:#888;">Forrás: ${keresletData.meta?.source||'?'} | Bankközi hitel: ${bk}%</div>`;
+
+  // LOANS
+  html += '<h4 style="color:#4caf50;margin:15px 0 10px;">HITELEK — Kereslet növelés</h4>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;">';
+
+  for(const [name, d] of Object.entries(keresletData.loans||{})) {
+    const sorted = Object.entries(d.pref).sort((a,b) => b[1]-a[1]);
+    const demandChange = d.demand[1] && d.demand[0] ? ((d.demand[1]/d.demand[0]-1)*100).toFixed(1) : '?';
+    const demandColor = parseFloat(demandChange) > 0 ? '#4caf50' : '#c0392b';
+
+    html += `<div style="background:#f9f7f4;border-radius:8px;padding:14px;border-left:4px solid #4caf50;">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">`;
+    html += `<span style="font-weight:700;color:#1b1b1b;font-size:14px;">${name}</span>`;
+    html += `<span style="font-size:12px;color:#888;">${d.mat}P lejárat</span></div>`;
+
+    // Demand bar
+    html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">`;
+    html += `<span style="font-size:12px;color:#aaa;">Kereslet:</span>`;
+    html += `<span style="font-size:13px;color:#1b1b1b;">${(d.demand[0]/1e6).toFixed(1)}M</span>`;
+    html += `<span style="color:${demandColor};font-size:12px;">→ ${(d.demand[1]/1e6).toFixed(1)}M (${demandChange>0?'+':''}${demandChange}%)</span>`;
+    html += `</div>`;
+
+    // Preference bars
+    html += `<div style="font-size:11px;color:#aaa;margin-bottom:4px;">Vásárlói preferencia:</div>`;
+    for(const [factor, pct] of sorted) {
+      const barW = pct * 2.5;
+      const barColor = factor === 'Kamat' ? '#c0392b' : factor === 'Márka' ? '#f5a623' : factor === 'Promóció' ? '#4caf50' : factor === 'Jutalék' ? '#2196f3' : '#9c27b0';
+      const strength = pct >= 40 ? '███' : pct >= 25 ? '██' : pct >= 15 ? '█' : '·';
+
+      // Strategy hint
+      let hint = '';
+      if(factor === 'Kamat') hint = pct >= 40 ? '↓↓ erősen csökkenteni' : pct >= 25 ? '↓ mérsékelten csökkenteni' : '↓ kicsit';
+      else if(factor === 'Promóció') hint = pct >= 20 ? '↑ növelni' : 'tartani';
+      else if(factor === 'Jutalék') hint = pct >= 20 ? '↓ csökkenteni' : 'tartani';
+      else if(factor === 'Díj') hint = pct >= 15 ? '↓ csökkenteni' : 'tartani';
+      else if(factor === 'Márka') hint = 'projektek+marketing';
+
+      html += `<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">`;
+      html += `<span style="width:65px;font-size:11px;color:#ccc;">${factor}</span>`;
+      html += `<div style="width:${barW}px;height:14px;background:${barColor};border-radius:3px;"></div>`;
+      html += `<span style="font-size:11px;color:#1b1b1b;font-weight:600;">${pct}%</span>`;
+      html += `<span style="font-size:10px;color:#888;">${hint}</span>`;
+      html += `</div>`;
+    }
+
+    // P0 values
+    if(d.p0) {
+      html += `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,0.06);font-size:11px;color:#666;">`;
+      html += `P0: Kamat ${d.p0.kamat}% | Promó ${(d.p0.promo/1000).toFixed(0)}k | Jutalék ${d.p0.jutalek}% | Díj ${d.p0.dij}%`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  html += '</div>';
+
+  // DEPOSITS
+  html += '<h4 style="color:#c0392b;margin:20px 0 10px;">BETÉTEK — Kereslet csökkentés (bankközi: ' + bk + '%)</h4>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;">';
+
+  for(const [name, d] of Object.entries(keresletData.deposits||{})) {
+    const sorted = Object.entries(d.pref).sort((a,b) => b[1]-a[1]);
+    // Promó% = promó / teljes betétállomány (nem új betét!)
+    // Állomány becslés: P0 stock ≈ demand / csapatszám × lejárat_szorzó (de inkább p0 adatból)
+    const teamCount = keresletData.meta?.teams?.length || 4;
+    const ourNewDep = d.demand[0] / teamCount;  // kb. mi részünk az új betétből
+    const stockEstimate = ourNewDep * Math.min(d.mat, 4); // állomány becslés = new × lejárat
+    const promoPct = (d.p0 && stockEstimate > 0) ? (d.p0.promo / stockEstimate * 100) : 0;
+    const allinCost = d.p0 ? (d.p0.kamat + promoPct) : 0;
+    const costVsBk = d.p0 ? (bk - allinCost).toFixed(2) : '?';
+    const costColor = parseFloat(costVsBk) > 0.3 ? '#4caf50' : parseFloat(costVsBk) > -0.3 ? '#f5a623' : '#c0392b';
+
+    html += `<div style="background:#f9f7f4;border-radius:8px;padding:14px;border-left:4px solid #c0392b;">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">`;
+    html += `<span style="font-weight:700;color:#1b1b1b;font-size:14px;">${name}</span>`;
+    html += `<span style="font-size:12px;color:${costColor};">Kamat ${d.p0?d.p0.kamat:'?'}% + Promó ${promoPct.toFixed(1)}% = <b>${allinCost.toFixed(2)}%</b> all-in (BK ${bk}%, ${parseFloat(costVsBk)>0?'olcsóbb ✓':'DRÁGÁBB ✗'})</span></div>`;
+
+    // Demand
+    const demandChange = d.demand[1] && d.demand[0] ? ((d.demand[1]/d.demand[0]-1)*100).toFixed(1) : '?';
+    html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">`;
+    html += `<span style="font-size:12px;color:#aaa;">Kereslet:</span>`;
+    html += `<span style="font-size:13px;color:#1b1b1b;">${(d.demand[0]/1e6).toFixed(1)}M</span>`;
+    html += `<span style="font-size:12px;color:#f5a623;">→ ${(d.demand[1]/1e6).toFixed(1)}M (${demandChange>0?'+':''}${demandChange}%)</span>`;
+    html += `<span style="font-size:11px;color:#888;">${d.mat}P lejárat</span>`;
+    html += `</div>`;
+
+    // Preference bars (deposit: reverse strategy)
+    for(const [factor, pct] of sorted) {
+      const barW = pct * 2.5;
+      const barColor = factor === 'Kamat' ? '#c0392b' : factor === 'Márka' ? '#f5a623' : factor === 'Promóció' ? '#4caf50' : factor === 'Jutalék' ? '#2196f3' : '#9c27b0';
+
+      let hint = '';
+      if(factor === 'Kamat') hint = pct >= 40 ? '↓↓↓ erősen vágni!' : pct >= 25 ? '↓↓ vágni' : '↓ csökkenteni';
+      else if(factor === 'Promóció') hint = pct >= 20 ? '↓↓ vágni!' : '↓ csökkenteni';
+      else if(factor === 'Díj') hint = pct >= 15 ? '↑↑ emelni!' : '↑ emelni';
+      else if(factor === 'Jutalék') hint = pct >= 15 ? '↓ csökkenteni' : 'tartani';
+      else if(factor === 'Márka') hint = 'nem rontható (hitelnek kell)';
+
+      html += `<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">`;
+      html += `<span style="width:65px;font-size:11px;color:#ccc;">${factor}</span>`;
+      html += `<div style="width:${barW}px;height:14px;background:${barColor};border-radius:3px;"></div>`;
+      html += `<span style="font-size:11px;color:#1b1b1b;font-weight:600;">${pct}%</span>`;
+      html += `<span style="font-size:10px;color:#888;">${hint}</span>`;
+      html += `</div>`;
+    }
+
+    if(d.p0) {
+      html += `<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,0,0,0.06);font-size:11px;color:#666;">`;
+      html += `P0: Kamat ${d.p0.kamat}% | Promó ${(d.p0.promo/1000).toFixed(0)}k | Jutalék ${d.p0.jutalek}% | Díj ${d.p0.dij}%`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  html += '</div>';
+
+  // Summary strategy
+  html += `<div style="margin-top:20px;padding:16px;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.15);border-radius:8px;">`;
+  html += `<div style="font-weight:700;color:#c0392b;margin-bottom:8px;">Stratégia összefoglaló</div>`;
+  html += `<div style="font-size:13px;color:#ccc;line-height:1.8;">`;
+  html += `<b style="color:#4caf50;">HITEL:</b> Magas pref%-os tényezőt JAVÍTANI (kamat↓ promó↑ jutalék↓)<br>`;
+  html += `<b style="color:#c0392b;">BETÉT:</b> Magas pref%-os tényezőt RONTANI (kamat↓↓ promó vágás díj↑)<br>`;
+  html += `<b style="color:#f5a623;">BETÉT FLOOR:</b> Bankközi hitel ${bk}% → ennél olcsóbb betétet TARTANI, drágábbat VÁGNI`;
+  html += `</div></div>`;
+
+  el.innerHTML = html;
 }
 </script>
 <script>
