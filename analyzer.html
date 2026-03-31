@@ -1413,7 +1413,8 @@ function renderRVScoreboard(rows) {
   });
 
   const jtr = rvData[JTR];
-  const othAvgRV = rvData.filter((_,i) => i!==JTR).reduce((s,d) => s+d.rv, 0) / 4;
+  const others = rvData.filter((_,i) => i!==JTR);
+  const othAvgRV = others.length > 0 ? others.reduce((s,d) => s+d.rv, 0) / others.length : 0;
 
   let html = '<table>';
   html += '<tr><th></th>';
@@ -1449,7 +1450,8 @@ function renderRVScoreboard(rows) {
     html += '<tr>';
     html += `<td>${cr.label}</td>`;
     const jtrV = jtr[cr.key];
-    const othAvg = rvData.filter((_,i)=>i!==JTR).reduce((s,d) => s+d[cr.key],0)/4;
+    const othArr = rvData.filter((_,i)=>i!==JTR);
+    const othAvg = othArr.length > 0 ? othArr.reduce((s,d) => s+d[cr.key],0)/othArr.length : 0;
     TEAMS.forEach((t,i) => {
       const v = rvData[i][cr.key];
       const cls = i===JTR ? 'jtr-col' : '';
