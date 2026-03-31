@@ -851,11 +851,11 @@ tbody td {
       <button class="tab-btn" onclick="switchTab('rivals')" data-tab="rivals">
         <i data-lucide="users"></i> Ellenfél
       </button>
-      <button class="tab-btn" onclick="switchTab('tools')" data-tab="tools">
-        <i data-lucide="calculator"></i> Eszközök
+      <button class="tab-btn" onclick="switchTab('forecast')" data-tab="forecast">
+        <i data-lucide="telescope"></i> Előrejelzés
       </button>
-      <button class="tab-btn" onclick="switchTab('next')" data-tab="next">
-        <i data-lucide="fast-forward"></i> Következő Kör
+      <button class="tab-btn" onclick="switchTab('decisions')" data-tab="decisions">
+        <i data-lucide="sword"></i> Döntések
       </button>
     </nav>
 
@@ -928,21 +928,22 @@ tbody td {
     </div>
 
     <!-- TAB 5: Eszközök -->
-    <div class="tab-panel" id="tab-tools">
+    <!-- TAB: Előrejelzés -->
+    <div class="tab-panel" id="tab-forecast">
       <div class="grid">
-        <div class="panel panel-full" id="panelSim">
-          <h3><i data-lucide="calculator"></i> RV Kalkulátor</h3>
-          <div id="simContent"></div>
+        <div class="panel panel-full" id="panelForecast">
+          <h3><i data-lucide="telescope"></i> Előrejelzés — Jövőbeli adatok</h3>
+          <div id="forecastContent">Mega Scan JSON betöltése szükséges.</div>
         </div>
       </div>
     </div>
 
-    <!-- TAB 6: Következő Kör -->
-    <div class="tab-panel" id="tab-next">
+    <!-- TAB: Döntések -->
+    <div class="tab-panel" id="tab-decisions">
       <div class="grid">
-        <div class="panel panel-full" id="panelNextRound">
-          <h3><i data-lucide="fast-forward"></i> Következő Kör — Előretekintés</h3>
-          <div id="nextRoundContent">Mega Scan JSON betöltése szükséges az előretekintéshez.</div>
+        <div class="panel panel-full" id="panelDecisions">
+          <h3><i data-lucide="sword"></i> Ellenfél Döntések</h3>
+          <div id="decisionsContent">Mega Scan JSON betöltése szükséges.</div>
         </div>
       </div>
     </div>
@@ -1349,8 +1350,8 @@ function renderAll() {
   renderDecisionAnalysis(rows);
   renderEllenfelElemzes(rows);
   renderViselkedes(rows);
-  renderCalculator(rows);
-  renderNextRound();
+  renderForecast();
+  renderDecisionsTab();
   // Auto-kereslet ha scan betöltve
   if (megaScanData && megaScanData.market && !keresletData) {
     loadDefaultKereslet();
@@ -3815,20 +3816,15 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-function renderNextRound() {
-  const el = document.getElementById('nextRoundContent');
+// ===== ELŐREJELZÉS TAB =====
+function renderForecast() {
+  const el = document.getElementById('forecastContent');
   if (!el) return;
-  if (!megaScanData) {
-    el.innerHTML = '<p style="color:var(--text-muted);">Mega Scan JSON betöltése szükséges az előretekintéshez.</p>';
-    return;
-  }
+  if (!megaScanData) { el.innerHTML = '<p style="color:var(--text-muted);">Mega Scan JSON betöltése szükséges.</p>'; return; }
 
   let html = '';
   const rates = megaScanData.rates || {};
   const rv = megaScanData.rvFormula || {};
-  const decisions = megaScanData.decisions || {};
-  const market = megaScanData.market || {};
-  const teams = megaScanData.meta?.teams || [];
   const period = megaScanData.meta?.period || {};
 
   // 1. Bankközi kamatok előrejelzés
@@ -3861,7 +3857,53 @@ function renderNextRound() {
     html += '</div></div>';
   }
 
-  // 3. Ellenfél döntések összehasonlítás
+  // Befektetési hozamok
+  if (rates.befektetesek) {
+    html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Befektetési hozamok (periódusonként)</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">';
+    const befNames = {interiorBond:'Hazai kötvény',foreignBond:'Külföldi kötvény',interiorShare:'Hazai részvény',foreignShare:'Külföldi részvény'};
+    for (const [k,name] of Object.entries(befNames)) {
+      const vals = rates.befektetesek[k];
+      if (!vals || !Array.isArray(vals)) continue;
+      html += '<div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border);">';
+      html += '<div style="font-size:11px;color:var(--text-muted);">' + name + '</div>';
+      html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;font-weight:600;color:var(--text-primary);">' + vals.map(v=>v+'%').join(' → ') + '</div>';
+      html += '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Bankközi betéti kamatok is
+  if (rates.bankkoziBetet) {
+    html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Bankközi betéti kamat (periódusonként)</div>';
+    html += '<div style="display:flex;gap:12px;">';
+    rates.bankkoziBetet.forEach((r,i) => {
+      const isCurrent = i === (period.current || 1) - 1;
+      html += '<div style="background:' + (isCurrent ? 'var(--accent-blue)' : 'var(--surface)') + ';border-radius:6px;padding:10px 16px;text-align:center;border:1px solid var(--border);">';
+      html += '<div style="font-size:10px;color:' + (isCurrent ? '#fff' : 'var(--text-muted)') + ';">P' + (i+1) + '</div>';
+      html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:16px;font-weight:700;color:' + (isCurrent ? '#fff' : 'var(--text-primary)') + ';">' + r + '%</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  el.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ===== DÖNTÉSEK TAB =====
+function renderDecisionsTab() {
+  const el = document.getElementById('decisionsContent');
+  if (!el) return;
+  if (!megaScanData) { el.innerHTML = '<p style="color:var(--text-muted);">Mega Scan JSON betöltése szükséges.</p>'; return; }
+
+  let html = '';
+  const decisions = megaScanData.decisions || {};
+  const market = megaScanData.market || {};
+
+  // 1. Ellenfél döntések összehasonlítás
   if (Object.keys(decisions).length > 0) {
     html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Csapat döntések összehasonlítása (P1)</div>';
     html += '<div style="overflow-x:auto;"><table><tr><th>Döntés</th>';
@@ -3945,6 +3987,10 @@ function renderNextRound() {
   el.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+// Legacy aliases
+function renderNextRound() { renderForecast(); renderDecisionsTab(); }
+function renderCalculator() { /* removed */ }
 
 // Init Lucide icons after DOM
 document.addEventListener("DOMContentLoaded", () => { if(typeof lucide !== "undefined") lucide.createIcons(); });
