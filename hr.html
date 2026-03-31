@@ -84,7 +84,7 @@ header a{font-size:0.95rem}
 
 <!-- Header -->
 <header>
-  <h1>DMB 2026 — HR Optimalizátor (A piac)</h1>
+  <h1>DMB 2026 — HR Optimalizátor (Selejtező A P2)</h1>
   <a href="https://nagytam94.github.io/dmb-optimizer/analyzer.html">&larr; Vissza a Dashboardhoz</a>
 </header>
 
@@ -100,8 +100,9 @@ header a{font-size:0.95rem}
     </label>
     <label>Piac preset
       <select id="marketPreset" onchange="applyPreset()" style="background:#1a1a2e;border:1px solid #0f3460;color:#eee;padding:8px 12px;border-radius:6px;font-size:1rem;">
-        <option value="a2026">Selejtező A 2026 (459 fő, 930 bér)</option>
-        <option value="h2026">Teszt H 2026 (347 fő, 930 bér)</option>
+        <option value="a2026p2">Selejtező A P2 (271 fő, most aktív)</option>
+        <option value="a2026">Selejtező A P1 (459 fő, múlt)</option>
+        <option value="h2026">Teszt H 2026 (347 fő)</option>
       </select>
     </label>
   </div>
@@ -114,16 +115,16 @@ header a{font-size:0.95rem}
   <div class="slider-group">
     <label>Ber / fo</label>
     <div class="slider-row">
-      <input type="range" id="wageSlider" min="450" max="1500" step="10" value="930">
-      <input type="number" id="wageNum" min="450" max="1500" step="10" value="930">
+      <input type="range" id="wageSlider" min="450" max="1600" step="10" value="700">
+      <input type="number" id="wageNum" min="450" max="1600" step="10" value="700">
     </div>
   </div>
 
   <div class="slider-group">
     <label>Felvetel / Elbocsatas</label>
     <div class="slider-row">
-      <input type="range" id="hireSlider" min="-50" max="200" step="1" value="0">
-      <input type="number" id="hireNum" min="-50" max="200" step="1" value="0">
+      <input type="range" id="hireSlider" min="-50" max="500" step="1" value="0">
+      <input type="number" id="hireNum" min="-50" max="500" step="1" value="0">
     </div>
   </div>
 
@@ -167,7 +168,7 @@ header a{font-size:0.95rem}
 <div class="panel" style="margin-top:24px">
   <h2>Optimalis Kereses</h2>
   <p style="color:#aaa;margin-bottom:12px">Grid search: bér, felvétel, képzés kombinációk &mdash; kihasználtság 60-98% között, összköltség szerint rendezve.</p>
-  <p style="color:#f5a623;margin-bottom:12px;font-size:0.85rem">⚠ A piac P0: 459 fő, 59.66% kihasználtság — erősen alulhasznált! Létszám csökkentés szükséges.</p>
+  <p style="color:#f5a623;margin-bottom:12px;font-size:0.85rem">⚠ A piac P2: 271 fő, 87.53% kihasználtság — P1-ben minimálbér (450) → 138 fős fluktuáció! Felvétel szükséges.</p>
   <button class="btn-optimize" onclick="runOptimize()">Optimalizalas inditasa</button>
   <div id="optResults"></div>
 </div>
@@ -176,9 +177,10 @@ header a{font-size:0.95rem}
 <div class="panel">
   <h2>Visszafejtett Kepletek</h2>
   <ul class="formula-list">
-    <li><b style="color:#4caf50">A piac (selejtező):</b></li>
-    <li>Fluktuáció = -50.36 &times; (1176 / bér)<sup>1.368</sup> &nbsp; <span style="color:#888">[plafon: -138 ha bér ≤ 570]</span> <i class="info-btn" title="R² = 0.999, 48 mérés, A piac 2026">i</i></li>
-    <li>Kihasználtság% = 35.40 + 7948/Létszám + 1250.7/(Képzés + 22.14) <i class="info-btn" title="R² = 0.989, 51 mérés, A piac 2026">i</i></li>
+    <li><b style="color:#4caf50">A piac (selejtező) — FRISSÍTVE P2 adatokkal:</b></li>
+    <li>turnoverRate(bér) = 0.155 &times; (930 / bér)<sup>1.34</sup> &nbsp; <span style="color:#888">[cap: 0.30 (30%)]</span></li>
+    <li>Fluktuáció = -round(Létszám_elején &times; turnoverRate) <i class="info-btn" title="R² = 0.999, 136 mérés (P1:98 + P2:100), A piac 2026. Fluk arányos a létszámmal!">i</i></li>
+    <li>Kihasználtság% = 35.40 + 7948/Létszám + 1250.7/(Képzés + 22.14) <i class="info-btn" title="R² = 0.989, 151 mérés, A piac 2026">i</i></li>
     <li><b style="color:#e94560">H piac (tesztforduló):</b></li>
     <li>Fluktuáció = -34.42 &times; (930 / bér)<sup>1.525</sup> <i class="info-btn" title="R² = 0.999, 8 mérés, H piac">i</i></li>
     <li>Kihasználtság% = 28.89 + 12337/Létszám + 1929.5/(Képzés + 26.21) <i class="info-btn" title="RMSE=0.51, 17 mérés, H piac">i</i></li>
@@ -217,7 +219,8 @@ header a{font-size:0.95rem}
 <script>
 // === PRESETS ===
 const PRESETS = {
-  a2026: { letszam: 459, marketAvg: 930, p0ber: 930, p0kepzes: 45, p0kihaszn: 59.66, p0fluk: 75, p0kepzettseg: 58.81, label: "Selejtező A 2026" },
+  a2026p2: { letszam: 271, marketAvg: 930, p0ber: 450, p0kepzes: 45, p0kihaszn: 87.53, p0fluk: 138, p0kepzettseg: 59, label: "Selejtező A P2 (271 fő)" },
+  a2026: { letszam: 459, marketAvg: 930, p0ber: 930, p0kepzes: 45, p0kihaszn: 59.66, p0fluk: 75, p0kepzettseg: 58.81, label: "Selejtező A P1 (459 fő)" },
   h2026: { letszam: 347, marketAvg: 930, p0ber: 930, p0kepzes: 70, p0kihaszn: 93.36, p0fluk: 35, p0kepzettseg: 55, label: "Teszt H 2026" }
 };
 
@@ -234,18 +237,23 @@ function applyPreset() {
   // Rebuild charts with new model
   const mfl = getMeasuredFluk();
   chartFluk.data.datasets[0].data = mfl.map(d => ({x:d[0], y:d[1]}));
+  const base = +document.getElementById('baseLetszam').value;
   const newModelFluk = [];
-  for(let w=450;w<=1500;w+=10) newModelFluk.push({x:w,y:Math.abs(calcFluk(w,930))});
+  for(let w=450;w<=1600;w+=10) newModelFluk.push({x:w,y:Math.abs(calcFluk(w,930,base))});
   chartFluk.data.datasets[1].data = newModelFluk;
   chartFluk.update();
   update(); updateCharts(); populateDataTables();
 }
 
 // === CORE FORMULAS ===
-// A piac (2026 selejtező): 98 mérés, R²=0.999/0.989
-function calcFlukA(wage) {
-  if (wage <= 570) return -138;  // plafon
-  return -Math.round(50.36 * Math.pow(1176 / wage, 1.368));
+// A piac (2026 selejtező): fluktuáció arányos létszámmal!
+// turnoverRate(bér) = 0.155 × (930/bér)^1.34, cap at 0.30
+// fluk = -round(létszám × turnoverRate)
+// 136 mérés (P1: 98 + P2: 100), R²=0.999
+function calcFlukA(wage, letszamStart) {
+  const rate = Math.min(0.30, 0.155 * Math.pow(930 / wage, 1.34));
+  const base = letszamStart || +document.getElementById('baseLetszam').value || 271;
+  return -Math.round(base * rate);
 }
 
 function calcKihasznA(letszam, training) {
@@ -265,23 +273,23 @@ function calcKihasznH(letszam, training) {
 }
 
 // Dynamic dispatch based on selected market
-function calcFluk(wage, marketAvg) {
-  const sel = document.getElementById('marketPreset')?.value || 'a2026';
-  return sel === 'a2026' ? calcFlukA(wage) : calcFlukH(wage, marketAvg);
+function calcFluk(wage, marketAvg, letszamStart) {
+  const sel = document.getElementById('marketPreset')?.value || 'a2026p2';
+  return (sel === 'a2026' || sel === 'a2026p2') ? calcFlukA(wage, letszamStart) : calcFlukH(wage, marketAvg);
 }
 
 function calcKihaszn(letszam, training) {
-  const sel = document.getElementById('marketPreset')?.value || 'a2026';
-  return sel === 'a2026' ? calcKihasznA(letszam, training) : calcKihasznH(letszam, training);
+  const sel = document.getElementById('marketPreset')?.value || 'a2026p2';
+  return (sel === 'a2026' || sel === 'a2026p2') ? calcKihasznA(letszam, training) : calcKihasznH(letszam, training);
 }
 
 function calcLetszam(letszamStart, hire, wage, marketAvg) {
-  const fluk = calcFluk(wage, marketAvg);
+  const fluk = calcFluk(wage, marketAvg, letszamStart);
   return Math.max(0, letszamStart + hire + fluk);
 }
 
 function calcCosts(wage, hire, training, letszamStart, marketAvg) {
-  const fluk = calcFluk(wage, marketAvg);
+  const fluk = calcFluk(wage, marketAvg, letszamStart);
   const letszam = Math.max(1, letszamStart + hire + fluk);
   const kihaszn = calcKihaszn(letszam, training);
   const szemKtg = letszam * wage;
@@ -346,7 +354,11 @@ Chart.defaults.borderColor = '#0f3460';
 
 // Chart 1: Wage -> Fluctuation
 // Measured data switches per market
-const measuredFlukA = [[590,131],[610,125],[650,114],[700,102],[750,93],[800,86],[850,78],[930,69],[1010,62],[1100,55],[1200,50],[1300,45],[1390,41]];
+// P2 measured (271 fő): 100 tests, 2026-03-30
+const measuredFlukA_P2 = [[450,81],[500,81],[550,81],[600,76],[650,67],[700,60],[750,55],[800,50],[850,46],[900,42],[950,40],[1000,37],[1050,35],[1100,33],[1150,31],[1200,29],[1300,26],[1400,24],[1500,22],[1600,21]];
+// P1 measured (459 fő): 98 tests
+const measuredFlukA_P1 = [[590,131],[610,125],[650,114],[700,102],[750,93],[800,86],[850,78],[930,69],[1010,62],[1100,55],[1200,50],[1300,45],[1390,41]];
+const measuredFlukA = measuredFlukA_P2;
 const measuredFlukH = [[450,104],[500,89],[550,77],[600,67],[650,59],[700,53],[800,43],[930,35]];
 function getMeasuredFluk() {
   const sel = document.getElementById('marketPreset')?.value || 'a2026';
@@ -354,8 +366,9 @@ function getMeasuredFluk() {
 }
 const measuredFluk = getMeasuredFluk();
 const modelFlukData = [];
-for (let w = 450; w <= 1500; w += 10) {
-  modelFlukData.push({ x: w, y: Math.abs(calcFluk(w, 930)) });
+const initBase = +document.getElementById('baseLetszam').value || 271;
+for (let w = 450; w <= 1600; w += 10) {
+  modelFlukData.push({ x: w, y: Math.abs(calcFluk(w, 930, initBase)) });
 }
 
 const chartFluk = new Chart(document.getElementById('chartFluk'), {
@@ -591,8 +604,8 @@ function runOptimize() {
 
   const wages = [];
   for (let w = 450; w <= 1000; w += 50) wages.push(w);
-  const hires = [-50, -30, -20, -10, 0, 10, 20, 30, 50, 80, 100];
-  const trains = [0, 10, 20, 30, 40, 50, 60, 70, 80, 100];
+  const hires = [-50, 0, 50, 100, 150, 200, 250, 300, 350, 400];
+  const trains = [0, 10, 20, 30, 40, 50, 60, 70, 80, 100, 150, 200];
 
   const results = [];
   for (const w of wages) {
