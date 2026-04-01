@@ -4799,14 +4799,16 @@ function updateHRTarget() {
   const target = parseInt(document.getElementById('hrTargetSlider')?.value) || 85;
   document.getElementById('hrTargetVal').textContent = target + '%';
 
-  // Grid search: find cheapest combo that hits target
+  // Grid search: fenntartható megoldások (nem egyperiódus-trükkök)
   const letszam = window._hrCurLetszam;
   const results = [];
-  for (let w = 450; w <= 1100; w += 25) {
-    for (let h = -40; h <= 150; h += 5) {
-      for (let t = 0; t <= 80; t += 5) {
+  // Ésszerű tartományok: bér 550+ (fenntartható), felvétel -30..+50, képzés 0-60
+  for (let w = 550; w <= 1000; w += 25) {
+    for (let h = -30; h <= 50; h += 5) {
+      for (let t = 0; t <= 60; t += 5) {
         const r = window._hrCalcCost(w, h, t, letszam);
-        if (r.letszam > 30 && r.kih >= target - 3 && r.kih <= target + 5) {
+        const flukRate = Math.abs(r.fluk) / letszam;
+        if (r.letszam > 80 && r.kih >= target - 3 && r.kih <= target + 5 && flukRate < 0.25) {
           results.push(r);
         }
       }
