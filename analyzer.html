@@ -857,9 +857,9 @@ tbody td {
       <button class="tab-btn" onclick="switchTab('decisions')" data-tab="decisions">
         <i data-lucide="skull"></i> Ellenfél Döntései
       </button>
-      <a href="marketing_optimizer.html" class="tab-btn" style="margin-left:auto;background:var(--accent-orange);color:#fff;text-decoration:none;" target="_blank">
+      <button class="tab-btn" onclick="switchTab('marketing')" data-tab="marketing" style="margin-left:auto;">
         <i data-lucide="target"></i> Marketing
-      </a>
+      </button>
     </nav>
 
     <!-- TAB 1: Összefoglaló -->
@@ -947,6 +947,16 @@ tbody td {
         <div class="panel panel-full" id="panelDecisions">
           <h3><i data-lucide="sword"></i> Ellenfél Döntések</h3>
           <div id="decisionsContent">Mega Scan JSON betöltése szükséges.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Marketing -->
+    <div class="tab-panel" id="tab-marketing">
+      <div class="grid">
+        <div class="panel panel-full" id="panelMarketing">
+          <h3><i data-lucide="target"></i> Marketing Elemzés & Optimalizálás</h3>
+          <div id="marketingContent">Betöltés...</div>
         </div>
       </div>
     </div>
@@ -1371,6 +1381,7 @@ function renderAll() {
   renderViselkedes(rows);
   renderForecast();
   renderDecisionsTab();
+  renderMarketing();
   // Auto-kereslet ha scan betöltve
   if (megaScanData && megaScanData.market && !keresletData) {
     loadDefaultKereslet();
@@ -4347,6 +4358,278 @@ function renderDecisionsTab() {
 // Legacy aliases
 function renderNextRound() { renderForecast(); renderDecisionsTab(); }
 function renderCalculator() { /* removed */ }
+
+// ===== MARKETING TAB =====
+function renderMarketing() {
+  const el = document.getElementById('marketingContent');
+  if (!el) return;
+
+  // Empirical model params (660 measurements, R²=0.99987)
+  const BASE = 22.27;
+  const CHANNELS = [
+    {name:'Online', a:24.2133, K:241816, color:'#d4763a'},
+    {name:'TV', a:12.1952, K:229392, color:'#2d6a4f'},
+    {name:'Offline', a:14.0718, K:350207, color:'#3a7bd5'},
+    {name:'PR', a:8.9994, K:607109, color:'#7c3aed'},
+    {name:'CSR', a:4.0737, K:117726, color:'#64748b'},
+  ];
+
+  function calcBrand(alloc) {
+    let b = BASE;
+    CHANNELS.forEach((ch,i) => { b += ch.a * (1 - Math.exp(-(alloc[i]||0) / ch.K)); });
+    return b;
+  }
+
+  function greedyOptimize(budget) {
+    const alloc = [0,0,0,0,0];
+    const step = 5000;
+    let rem = budget;
+    while (rem >= step) {
+      let bestI = 0, bestMarg = 0;
+      CHANNELS.forEach((ch,i) => {
+        const marg = ch.a * (Math.exp(-alloc[i]/ch.K) - Math.exp(-(alloc[i]+step)/ch.K));
+        if (marg > bestMarg) { bestMarg = marg; bestI = i; }
+      });
+      if (bestMarg <= 0) break;
+      alloc[bestI] += step;
+      rem -= step;
+    }
+    return alloc;
+  }
+
+  function findBudget(target) {
+    if (target <= BASE) return { budget: 0, alloc: [0,0,0,0,0] };
+    let lo = 0, hi = 3000000;
+    for (let i = 0; i < 50; i++) {
+      const mid = (lo+hi)/2;
+      if (calcBrand(greedyOptimize(mid)) < target) lo = mid; else hi = mid;
+    }
+    const budget = Math.ceil(hi/5000)*5000;
+    return { budget, alloc: greedyOptimize(budget) };
+  }
+
+  // Awareness/Loyalty params (from giga scan if available)
+  const hasScan = !!megaScanData;
+  const AW = {tv:{mean:200000,base:55000,w:0.20},online:{mean:220000,base:55000,w:0.40},offline:{mean:300000,base:30000,w:0.20},pr:{mean:500000,base:20000,w:0.12},csr:{mean:90000,base:50000,w:0.08}};
+  const LY = {tv:{mean:210000,base:-50000,w:0.15},online:{mean:240000,base:-60000,w:0.25},offline:{mean:280000,base:-70000,w:0.10},pr:{mean:290000,base:-80000,w:0.22},csr:{mean:230000,base:-90000,w:0.28}};
+  const EFF = {aw:7, ly:0.5};
+
+  // If giga scan has marketing data, use it
+  if (megaScanData?.marketing?.csatornak) {
+    const ch = megaScanData.marketing.csatornak;
+    for (const [k,v] of Object.entries(ch)) {
+      if (AW[k] && v.awareness) { AW[k].mean = v.awareness.mean; AW[k].base = v.awareness.base; AW[k].w = v.awareness.weight; }
+      if (LY[k] && v.loyalty) { LY[k].mean = v.loyalty.mean; LY[k].base = v.loyalty.base; LY[k].w = v.loyalty.weight; }
+    }
+  }
+  if (megaScanData?.marketing?.hatekonysag) {
+    EFF.aw = megaScanData.marketing.hatekonysag.awareness || 7;
+    EFF.ly = megaScanData.marketing.hatekonysag.loyalty || 0.5;
+  }
+
+  function chScore(spend, params) {
+    const eff = Math.max(0, params.base + spend);
+    return params.w * (1 - Math.exp(-eff / params.mean));
+  }
+
+  function dualOptimize(budget, awW, lyW) {
+    const alloc = {tv:0,online:0,offline:0,pr:0,csr:0};
+    const step = 5000;
+    let rem = budget;
+    while (rem >= step) {
+      let bestCh = null, bestGain = -Infinity;
+      for (const ch of Object.keys(alloc)) {
+        const ga = chScore(alloc[ch]+step, AW[ch]) - chScore(alloc[ch], AW[ch]);
+        const gl = chScore(alloc[ch]+step, LY[ch]) - chScore(alloc[ch], LY[ch]);
+        const gain = awW * ga * EFF.aw + lyW * gl * EFF.ly;
+        if (gain > bestGain) { bestGain = gain; bestCh = ch; }
+      }
+      if (!bestCh || bestGain <= 0) break;
+      alloc[bestCh] += step;
+      rem -= step;
+    }
+    return alloc;
+  }
+
+  // ===== BUILD HTML =====
+  let html = '';
+
+  // === A: Target % ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--accent-green);margin-bottom:10px;">Cél Brand% → Szükséges büdzsé</div>';
+  html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">';
+  html += '<label style="font-weight:500;">Cél:</label>';
+  html += '<input type="range" id="mktTargetSlider" min="25" max="58" step="0.5" value="44" oninput="updateMktTarget()" style="flex:1;min-width:150px;accent-color:var(--accent-green);">';
+  html += '<span id="mktTargetVal" style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--accent-green);min-width:60px;">44.0%</span>';
+  html += '</div>';
+  html += '<div id="mktTargetResult" style="margin-top:10px;"></div>';
+  html += '</div>';
+
+  // === B: Budget → Allocation ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--accent-orange);margin-bottom:10px;">Büdzsé → Optimális elosztás</div>';
+  html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">';
+  html += '<label style="font-weight:500;">Büdzsé:</label>';
+  html += '<input type="number" id="mktBudgetInput" value="357000" step="10000" style="width:130px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:\'JetBrains Mono\',monospace;" oninput="updateMktBudget()">';
+  html += '<span style="color:var(--text-muted);font-size:12px;">Ft</span>';
+  html += '</div>';
+  html += '<div id="mktBudgetResult" style="margin-top:10px;"></div>';
+  html += '</div>';
+
+  // === C: Awareness & Loyalty ===
+  html += '<div style="background:var(--surface);border:2px solid var(--accent-green);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Awareness & Loyalty Optimalizátor</div>';
+  html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Awareness = azonnali ismertség | Loyalty = márkahűség (halmozódik, de csökken ha nem költesz)' + (hasScan ? ' — <span style="color:var(--accent-green);">Giga Scan adatok betöltve ✓</span>' : '') + '</div>';
+  html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">';
+  html += '<div style="display:flex;gap:3px;"><button class="tab-btn active" onclick="setMktDualMode(\'combined\')" data-mktmode="combined" style="padding:5px 12px;font-size:12px;min-height:auto;">Kombinált</button>';
+  html += '<button class="tab-btn" onclick="setMktDualMode(\'awareness\')" data-mktmode="awareness" style="padding:5px 12px;font-size:12px;min-height:auto;">Awareness</button>';
+  html += '<button class="tab-btn" onclick="setMktDualMode(\'loyalty\')" data-mktmode="loyalty" style="padding:5px 12px;font-size:12px;min-height:auto;">Loyalty</button></div>';
+  html += '<select id="mktRoundsLeft" onchange="updateMktDual()" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:\'DM Sans\',sans-serif;">';
+  html += '<option value="3">3 kör hátra</option><option value="2" selected>2 kör hátra</option><option value="1">Utolsó kör</option></select>';
+  html += '<input type="number" id="mktDualBudget" value="357000" step="10000" style="width:110px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:\'JetBrains Mono\',monospace;font-size:12px;" oninput="updateMktDual()">';
+  html += '</div>';
+  html += '<div id="mktDualResult"></div>';
+  html += '</div>';
+
+  // === D: Info ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:10px;">Modell információk <span class="info-btn" onclick="showInfo(\'Marketing modellek\',\'<b>Empirikus modell</b> (660 mérés, R²=0.99987):<br>Brand% = 22.27 + Σ(a × (1 - e^(-x/K)))<br>Csak az awareness-t méri (egyperiódus teszt).<br><br><b>Belső modell</b> (giga scan):<br>Awareness = azonnali hatás, weight alapján<br>Loyalty = halmozódó hatás, negatív base (csökken ha nem költesz)<br>Efficiency szorzók: awareness ×7, loyalty ×0.5\')">i</span></div>';
+
+  // Efficiency ranking
+  html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;"><b>Csatorna hatékonyság (empirikus a/K):</b></div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+  const sorted = [...CHANNELS].sort((a,b) => (b.a/b.K) - (a.a/a.K));
+  sorted.forEach(ch => {
+    const eff = (ch.a / ch.K * 100000).toFixed(1);
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;">';
+    html += '<span style="width:8px;height:8px;border-radius:2px;background:' + ch.color + ';"></span>';
+    html += '<b>' + ch.name + '</b> ' + eff + '/100k</div>';
+  });
+  html += '</div>';
+
+  // Awareness/Loyalty weights
+  if (hasScan) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;">';
+    html += '<div><b style="color:var(--accent-green);">Awareness súlyok:</b>';
+    Object.entries(AW).forEach(([k,v]) => { html += '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="text-transform:uppercase;">' + k + '</span><span style="font-family:\'JetBrains Mono\',monospace;">' + (v.w*100).toFixed(0) + '%</span></div>'; });
+    html += '</div>';
+    html += '<div><b style="color:var(--accent-orange);">Loyalty súlyok:</b>';
+    Object.entries(LY).forEach(([k,v]) => { html += '<div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="text-transform:uppercase;">' + k + '</span><span style="font-family:\'JetBrains Mono\',monospace;">' + (v.w*100).toFixed(0) + '%</span></div>'; });
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  // Store functions globally for event handlers
+  window._mktCalcBrand = calcBrand;
+  window._mktGreedy = greedyOptimize;
+  window._mktFindBudget = findBudget;
+  window._mktChannels = CHANNELS;
+  window._mktDualOptimize = dualOptimize;
+  window._mktAW = AW;
+  window._mktLY = LY;
+  window._mktEFF = EFF;
+  window._mktChScore = chScore;
+  window._mktDualMode = 'combined';
+
+  // Initial calculations
+  updateMktTarget();
+  updateMktBudget();
+  updateMktDual();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Marketing event handlers (global)
+function updateMktTarget() {
+  const slider = document.getElementById('mktTargetSlider');
+  if (!slider) return;
+  const target = parseFloat(slider.value);
+  document.getElementById('mktTargetVal').textContent = target.toFixed(1) + '%';
+  const result = window._mktFindBudget(target);
+  let html = '';
+  if (result.budget === 0) {
+    html = '<div style="color:var(--text-muted);">Az alap Brand% (' + 22.27 + '%) már eléri a célt.</div>';
+  } else {
+    html = '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:16px;font-weight:700;color:var(--accent-green);">' + result.budget.toLocaleString() + ' Ft</div>';
+    html += '<div style="display:flex;gap:6px;">';
+    window._mktChannels.forEach((ch,i) => {
+      if (result.alloc[i] > 0) html += '<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:' + ch.color + '15;color:' + ch.color + ';font-weight:600;">' + ch.name + ' ' + (result.alloc[i]/1000).toFixed(0) + 'k</span>';
+    });
+    html += '</div></div>';
+  }
+  document.getElementById('mktTargetResult').innerHTML = html;
+}
+
+function updateMktBudget() {
+  const input = document.getElementById('mktBudgetInput');
+  if (!input) return;
+  const budget = parseInt(input.value) || 0;
+  const alloc = window._mktGreedy(budget);
+  const brand = window._mktCalcBrand(alloc);
+  let html = '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
+  html += '<span style="font-size:12px;color:var(--text-muted);">Brand%:</span>';
+  html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:20px;font-weight:700;color:var(--accent-orange);">' + brand.toFixed(1) + '%</span>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  window._mktChannels.forEach((ch,i) => {
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;text-align:center;min-width:80px;">';
+    html += '<div style="font-size:10px;color:var(--text-muted);">' + ch.name + '</div>';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;font-weight:700;color:' + ch.color + ';">' + (alloc[i]/1000).toFixed(0) + 'k</div>';
+    html += '<div style="font-size:9px;color:var(--text-muted);">' + (budget>0?(alloc[i]/budget*100).toFixed(0)+'%':'0%') + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('mktBudgetResult').innerHTML = html;
+}
+
+function setMktDualMode(mode) {
+  window._mktDualMode = mode;
+  document.querySelectorAll('[data-mktmode]').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector('[data-mktmode="'+mode+'"]');
+  if (btn) btn.classList.add('active');
+  updateMktDual();
+}
+
+function updateMktDual() {
+  const budget = parseInt(document.getElementById('mktDualBudget')?.value) || 357000;
+  const rounds = parseInt(document.getElementById('mktRoundsLeft')?.value) || 2;
+  const mode = window._mktDualMode || 'combined';
+  let awW, lyW;
+  if (mode === 'awareness') { awW = 1; lyW = 0; }
+  else if (mode === 'loyalty') { awW = 0; lyW = 1; }
+  else { awW = 1; lyW = rounds * 0.5; }
+
+  const alloc = window._mktDualOptimize(budget, awW, lyW);
+  const AW = window._mktAW, LY = window._mktLY, EFF = window._mktEFF;
+  const chNames = {tv:'TV',online:'Online',offline:'Offline',pr:'PR',csr:'CSR'};
+  const chColors = {tv:'#2d6a4f',online:'#d4763a',offline:'#3a7bd5',pr:'#7c3aed',csr:'#64748b'};
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:5px;">Csatorna</th><th style="text-align:right;">Összeg</th><th style="text-align:right;color:var(--accent-green);">Awareness</th><th style="text-align:right;color:var(--accent-orange);">Loyalty</th><th style="text-align:right;">Kombi</th></tr>';
+
+  let totalA = 0, totalL = 0;
+  for (const [ch, spend] of Object.entries(alloc)) {
+    const aS = window._mktChScore(spend, AW[ch]) * EFF.aw;
+    const lS = window._mktChScore(spend, LY[ch]) * EFF.ly;
+    totalA += aS; totalL += lS;
+    const combi = awW * aS + lyW * lS;
+    html += '<tr style="border-bottom:1px solid var(--border-light);"><td style="padding:5px;"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + chColors[ch] + ';margin-right:4px;"></span><b>' + chNames[ch] + '</b></td>';
+    html += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;font-weight:600;">' + (spend>0?(spend/1000).toFixed(0)+'k':'—') + '</td>';
+    html += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;color:var(--accent-green);">' + aS.toFixed(2) + '</td>';
+    html += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;color:var(--accent-orange);">' + lS.toFixed(2) + '</td>';
+    html += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;font-weight:700;">' + combi.toFixed(2) + '</td></tr>';
+  }
+  html += '<tr style="border-top:2px solid var(--border);font-weight:700;"><td style="padding:5px;">ÖSSZESEN</td><td></td>';
+  html += '<td style="text-align:right;color:var(--accent-green);">' + totalA.toFixed(2) + '</td>';
+  html += '<td style="text-align:right;color:var(--accent-orange);">' + totalL.toFixed(2) + '</td>';
+  html += '<td></td></tr></table>';
+
+  html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Súlyozás: Awareness ×' + awW.toFixed(1) + ' | Loyalty ×' + lyW.toFixed(1) + ' | ' + rounds + ' kör hátra</div>';
+
+  document.getElementById('mktDualResult').innerHTML = html;
+}
 
 // Init Lucide icons after DOM
 document.addEventListener("DOMContentLoaded", () => { if(typeof lucide !== "undefined") lucide.createIcons(); });
