@@ -4418,6 +4418,25 @@ function renderDecisionsTab() {
   const decisions = megaScanData.decisions || megaScanData.dontesek || {};
   const teamNames = Object.keys(decisions);
   if (teamNames.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);">Nincs ellenfél döntési adat a betöltött JSON-ban.</p>'; return; }
+  // Detect latest period key per team (P1, P2, P3... — NOT _terv)
+  function getLatestPeriodKey(teamDec) {
+    if (!teamDec) return null;
+    const keys = Object.keys(teamDec).filter(k => !k.includes('terv'));
+    if (keys.length === 0) return null;
+    return keys.sort((a,b) => {
+      const na = parseInt(a.replace(/\D/g,'')) || 0;
+      const nb = parseInt(b.replace(/\D/g,'')) || 0;
+      return nb - na;
+    })[0];
+  }
+  // Get the latest period decisions for a team
+  function getTeamDec(t) {
+    const td = decisions[t];
+    if (!td) return null;
+    const pk = getLatestPeriodKey(td);
+    return pk ? td[pk] : null;
+  }
+  const latestPKey = getLatestPeriodKey(decisions[teamNames[0]]);
   const mono = "font-family:'JetBrains Mono',monospace;";
   const jC = 'background:rgba(212,118,58,0.06);font-weight:700;color:#d4763a;';
   const jH = 'background:#d4763a;color:#fff;';
@@ -4425,6 +4444,7 @@ function renderDecisionsTab() {
   const pjMap = {1:'Lakoss.prémium',2:'Fiókhálózat',3:'Munkabéres',4:'NextGen',5:'IT fejl.',6:'Private bank',7:'Training',8:'Szegmentáció',9:'Előrejelzés',10:'TBSZ',11:'MI+auto',12:'Hitelbírálat',13:'Ügynökség',14:'Váll.prémium',15:'MobilPOS',16:'Arculat'};
   function isJ(t){return t==='JTR';}
   let html = '';
+  if (latestPKey) html += `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Döntési periódus: <strong>${latestPKey}</strong></div>`;
 
   // === 1. MARKETING BONTÁS ===
   html += `<div style="${sH}">Marketing költés részletesen</div>`;
@@ -4435,7 +4455,7 @@ function renderDecisionsTab() {
   channels.forEach(ch => {
     html += `<tr><td style="text-transform:uppercase;font-weight:600;">${ch}</td>`;
     teamNames.forEach(t => {
-      const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+      const dec = getTeamDec(t);
       let val = '—';
       if (dec?.M_reszletes && dec.M_reszletes[ch] !== undefined) { val = Math.round(dec.M_reszletes[ch]).toLocaleString(); }
       html += `<td style="${mono}${isJ(t)?jC:''}">${val}</td>`;
@@ -4444,7 +4464,7 @@ function renderDecisionsTab() {
   });
   html += `<tr style="border-top:2px solid var(--border);font-weight:700;"><td>ÖSSZESEN</td>`;
   teamNames.forEach(t => {
-    const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+    const dec = getTeamDec(t);
     const total = dec?.M || (dec?.M_reszletes ? Object.values(dec.M_reszletes).reduce((s,v)=>s+(+v||0),0) : 0);
     html += `<td style="${mono}${isJ(t)?jC:''}">${Math.round(total).toLocaleString()}</td>`;
   });
@@ -4464,7 +4484,7 @@ function renderDecisionsTab() {
   hrFields.forEach(f => {
     html += `<tr><td>${f.label}</td>`;
     teamNames.forEach(t => {
-      const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+      const dec = getTeamDec(t);
       const val = f.get(dec);
       const isDefault = (f.label.includes('Bér') && +val === 930) || (f.label.includes('Felvétel') && +val === 37) || (f.label.includes('Képzés') && +val === 45) || (f.label.includes('IT') && +val === 10000);
       const display = isDefault ? `<span style="color:var(--text-muted);">${val} (default)</span>` : `<strong>${val}</strong>`;
@@ -4478,7 +4498,7 @@ function renderDecisionsTab() {
   html += `<div style="${sH}">Indított projektek</div>`;
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
   teamNames.forEach(t => {
-    const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+    const dec = getTeamDec(t);
     const projs = dec?.P || [];
     html += `<div style="background:${isJ(t)?'rgba(212,118,58,0.06)':'var(--bg-secondary)'};border-radius:var(--radius-sm);padding:14px;border-left:4px solid ${isJ(t)?'#d4763a':'var(--border)'};">`;
     html += `<div style="font-weight:700;color:${isJ(t)?'#d4763a':'var(--text-primary)'};margin-bottom:8px;">${t}</div>`;
@@ -4522,14 +4542,14 @@ function renderDecisionsTab() {
     // kamat row
     html += '<tr><td><strong>' + lk + '</strong> kamat%</td>';
     teamNames.forEach(t => {
-      const d = decisions[t]?.P1?.loans?.[lk];
+      const d = getTeamDec(t)?.loans?.[lk];
       html += '<td style="' + cellStyle(t) + '">' + (d ? d[0] + '%' : '—') + '</td>';
     });
     html += '</tr>';
     // promo row
     html += '<tr><td>' + lk + ' promo</td>';
     teamNames.forEach(t => {
-      const d = decisions[t]?.P1?.loans?.[lk];
+      const d = getTeamDec(t)?.loans?.[lk];
       html += '<td style="' + cellStyle(t) + '">' + (d ? fmtK(d[1]) : '—') + '</td>';
     });
     html += '</tr>';
@@ -4543,13 +4563,13 @@ function renderDecisionsTab() {
   depKeys.forEach(dk => {
     html += '<tr><td><strong>' + dk + ' betet</strong> kamat%</td>';
     teamNames.forEach(t => {
-      const d = decisions[t]?.P1?.deposits?.[dk];
+      const d = getTeamDec(t)?.deposits?.[dk];
       html += '<td style="' + cellStyle(t) + '">' + (d ? d[0] + '%' : '—') + '</td>';
     });
     html += '</tr>';
     html += '<tr><td>' + dk + ' betet promo</td>';
     teamNames.forEach(t => {
-      const d = decisions[t]?.P1?.deposits?.[dk];
+      const d = getTeamDec(t)?.deposits?.[dk];
       html += '<td style="' + cellStyle(t) + '">' + (d ? fmtK(d[1]) : '—') + '</td>';
     });
     html += '</tr>';
@@ -4560,7 +4580,7 @@ function renderDecisionsTab() {
   html += '<div style="' + sectionHead + '">C) Marketing reszletes bontas</div>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>TV</th><th>Online</th><th>Offline</th><th>PR</th><th>CSR</th><th>Osszes</th></tr>';
   teamNames.forEach(t => {
-    const m = decisions[t]?.P1?.marketing;
+    const m = getTeamDec(t)?.marketing;
     const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
     const cStyle = mono + (isJtr(t) ? 'font-weight:700;color:#d4763a;' : '');
     if (m && typeof m === 'object' && !Array.isArray(m)) {
@@ -4601,7 +4621,7 @@ function renderDecisionsTab() {
   html += '<div style="' + sectionHead + '">D) HR & IT dontesek</div>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>Felvetel</th><th>Ber</th><th>Kepzes</th><th>IT beruhazas</th></tr>';
   teamNames.forEach(t => {
-    const p1 = decisions[t]?.P1 || {};
+    const p1 = getTeamDec(t) || {};
     const h = p1.H || p1.h || p1.hr || [];
     const it = p1.IT || p1.it || 0;
     const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
@@ -4620,7 +4640,7 @@ function renderDecisionsTab() {
   html += '<div style="' + sectionHead + '">E) Projektek</div>';
   html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>Elinditott projektek</th></tr>';
   teamNames.forEach(t => {
-    const p = decisions[t]?.P1?.P || decisions[t]?.P1?.p || decisions[t]?.P1?.projects || [];
+    const p = getTeamDec(t)?.P || getTeamDec(t)?.p || getTeamDec(t)?.projects || [];
     const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
     const cStyle = isJtr(t) ? 'font-weight:700;color:#d4763a;' : '';
     const projList = p.map(n => '<span style="display:inline-block;padding:2px 8px;margin:2px;border-radius:6px;background:var(--bg-secondary);font-size:12px;">' + (projectNames[n] || ('#' + n)) + '</span>').join('');
@@ -4631,7 +4651,7 @@ function renderDecisionsTab() {
 
   // === BEFEKTETÉSI DÖNTÉSEK ===
   const hasInvestments = teamNames.some(t => {
-    const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+    const dec = getTeamDec(t);
     return dec?.inv || dec?.investments;
   });
   if (hasInvestments) {
@@ -4644,7 +4664,7 @@ function renderDecisionsTab() {
     invTypes.forEach(ik => {
       html += '<tr><td>' + (invNames[ik]||ik) + '</td>';
       teamNames.forEach(t => {
-        const dec = decisions[t]?.P1 || decisions[t]?.['1'];
+        const dec = getTeamDec(t);
         const inv = dec?.inv || dec?.investments || {};
         const val = inv[ik]?.invest !== undefined ? +inv[ik].invest : (inv[ik] !== undefined ? +inv[ik] : 0);
         const color = val > 0 ? 'var(--accent-green)' : val < 0 ? 'var(--accent-red)' : 'var(--text-muted)';
