@@ -4780,6 +4780,9 @@ function updateHRSim() {
     html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:600;color:'+(k.c||'var(--text-primary)')+';">'+k.v+'</div></div>';
   });
   html += '</div>';
+  // Figyelmeztetések
+  if (r.kih > 100) html += '<div style="margin-top:8px;padding:8px 12px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);border-radius:6px;font-size:12px;color:var(--accent-red);font-weight:600;">TÚLÓRA! A kihasználtság ' + r.kih.toFixed(0) + '% — a túlóra ' + Math.round(r.tulora).toLocaleString() + ' Ft extra költséget okoz. Emeld a béret vagy vegyél fel embereket!</div>';
+  if (r.letszam < 100) html += '<div style="margin-top:8px;padding:8px 12px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);border-radius:6px;font-size:12px;color:var(--accent-red);font-weight:600;">KRITIKUS LÉTSZÁM! Csak ' + Math.round(r.letszam) + ' fő marad — a következő körben még kevesebb lesz!</div>';
   document.getElementById('hrSimResult').innerHTML = html;
 }
 
@@ -4820,36 +4823,88 @@ function updateHRTarget() {
 function renderHRMultiPlan() {
   const el = document.getElementById('hrMultiPlan');
   if (!el) return;
-  const letszam = window._hrCurLetszam;
-  const periods = (megaScanData?.meta?.period?.final || 4) - (megaScanData?.meta?.period?.current || 2) + 1;
+  const startLet = window._hrCurLetszam;
+  const curPeriod = parseInt(megaScanData?.meta?.period?.current || 2);
+  const finalPeriod = parseInt(megaScanData?.meta?.period?.final || 4);
+  const periods = finalPeriod - curPeriod + 1;
+
+  // Per-periódus optimalizálás: cél 75-90% kihasználtság, legkisebb költség
+  function findBestForPeriod(letszamStart, isLast) {
+    let best = null;
+    const targetKihMin = isLast ? 60 : 72;
+    const targetKihMax = isLast ? 100 : 92;
+    const trainRange = isLast ? [0] : [0, 10, 20, 30, 45];
+    const wageRange = isLast ? [450, 500, 550] : [550, 600, 650, 700, 750, 800, 930];
+    const hireRange = [-30, -20, -10, 0, 10, 20, 30, 50];
+
+    for (const w of wageRange) {
+      for (const h of hireRange) {
+        for (const t of trainRange) {
+          const r = window._hrCalcCost(w, h, t, letszamStart);
+          if (r.letszam < 50) continue; // minimum létszám
+          if (r.kih >= targetKihMin && r.kih <= targetKihMax) {
+            if (!best || r.osszKtg < best.osszKtg) best = r;
+          }
+        }
+      }
+    }
+    // Fallback: ha nincs jó megoldás, lazítunk
+    if (!best) {
+      for (const w of [600, 700, 800, 930]) {
+        for (const h of [-20, 0, 20, 50]) {
+          for (const t of [0, 20, 45]) {
+            const r = window._hrCalcCost(w, h, t, letszamStart);
+            if (r.letszam < 30) continue;
+            if (r.kih <= 105) {
+              if (!best || r.osszKtg < best.osszKtg) best = r;
+            }
+          }
+        }
+      }
+    }
+    if (!best) best = window._hrCalcCost(700, 0, 30, letszamStart); // safe fallback
+    return best;
+  }
 
   let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
   html += '<tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:5px;">Kör</th><th>Bér</th><th>Felvétel</th><th>Képzés</th><th>Fluk</th><th>Létszám</th><th>Kih%</th><th>Költség</th><th>Tanács</th></tr>';
 
-  let currentLet = letszam;
+  let currentLet = startLet;
+  let totalCost = 0;
   for (let p = 0; p < Math.min(periods, 3); p++) {
     const isLast = p === periods - 1;
-    // Strategy: gradually reduce costs, last round minimize
-    const wage = isLast ? 450 : (p === 0 ? 700 : 600);
-    const hire = 0;
-    const train = isLast ? 0 : (p === 0 ? 30 : 20);
-    const r = window._hrCalcCost(wage, hire, train, currentLet);
-    const advice = isLast ? 'Utolsó kör: minimalizálás!' : (r.kih > 95 ? 'Figyelem: szoros kapacitás' : r.kih < 65 ? 'Felesleges kapacitás — elbocsátás?' : 'OK tartomány');
-    const advColor = isLast ? 'var(--accent-red)' : r.kih > 95 ? 'var(--accent-orange)' : r.kih < 65 ? 'var(--accent-blue)' : 'var(--accent-green)';
+    const pNum = curPeriod + p;
+    const r = findBestForPeriod(currentLet, isLast);
+
+    let advice = '';
+    let advColor = 'var(--accent-green)';
+    if (isLast) { advice = 'Utolsó kör — költségminimalizálás'; advColor = 'var(--accent-red)'; }
+    else if (r.kih > 100) { advice = 'TÚLÓRA! Bér emelés vagy felvétel kell'; advColor = 'var(--accent-red)'; }
+    else if (r.kih > 92) { advice = 'Szoros — figyelj a kapacitásra'; advColor = 'var(--accent-orange)'; }
+    else if (r.kih < 65) { advice = 'Felesleg — elbocsátás javasolt'; advColor = 'var(--accent-blue)'; }
+    else { advice = 'Optimális tartomány ✓'; }
+
+    const kihColor = r.kih > 100 ? 'var(--accent-red)' : r.kih > 92 ? 'var(--accent-orange)' : 'var(--accent-green)';
 
     html += '<tr style="border-bottom:1px solid var(--border-light);">';
-    html += '<td style="padding:5px;font-weight:600;">P' + (parseInt(megaScanData?.meta?.period?.current || 2) + p) + (isLast?' (utolsó)':'') + '</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + wage + '</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + hire + '</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + train + '</td>';
+    html += '<td style="padding:5px;font-weight:600;">P' + pNum + (isLast ? ' (utolsó)' : '') + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + r.wage + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + (r.hire >= 0 ? '+' : '') + r.hire + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + r.training + '</td>';
     html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;color:var(--accent-red);">' + r.fluk + '</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + Math.round(r.letszam) + '</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + r.kih.toFixed(1) + '%</td>';
-    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">' + Math.round(r.osszKtg).toLocaleString() + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">' + Math.round(r.letszam) + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;color:' + kihColor + ';font-weight:600;">' + r.kih.toFixed(1) + '%</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + Math.round(r.osszKtg).toLocaleString() + '</td>';
     html += '<td style="font-size:11px;color:' + advColor + ';">' + advice + '</td>';
     html += '</tr>';
+
+    totalCost += r.osszKtg;
     currentLet = r.letszam;
   }
+  html += '<tr style="border-top:2px solid var(--border);font-weight:700;">';
+  html += '<td style="padding:5px;" colspan="7">Összes HR költség ' + periods + ' kör</td>';
+  html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;color:var(--accent-green);">' + Math.round(totalCost).toLocaleString() + '</td>';
+  html += '<td></td></tr>';
   html += '</table>';
   el.innerHTML = html;
 }
