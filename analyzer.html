@@ -857,6 +857,9 @@ tbody td {
       <button class="tab-btn" onclick="switchTab('decisions')" data-tab="decisions">
         <i data-lucide="skull"></i> Ellenfél Döntései
       </button>
+      <button class="tab-btn" onclick="switchTab('hr')" data-tab="hr">
+        <i data-lucide="users-round"></i> HR
+      </button>
       <button class="tab-btn" onclick="switchTab('marketing')" data-tab="marketing" style="margin-left:auto;">
         <i data-lucide="target"></i> Marketing
       </button>
@@ -947,6 +950,16 @@ tbody td {
         <div class="panel panel-full" id="panelDecisions">
           <h3><i data-lucide="sword"></i> Ellenfél Döntések</h3>
           <div id="decisionsContent">Mega Scan JSON betöltése szükséges.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HR -->
+    <div class="tab-panel" id="tab-hr">
+      <div class="grid">
+        <div class="panel panel-full" id="panelHR">
+          <h3><i data-lucide="users-round"></i> HR Optimalizálás</h3>
+          <div id="hrTabContent">Betöltés...</div>
         </div>
       </div>
     </div>
@@ -1382,6 +1395,7 @@ function renderAll() {
   renderForecast();
   renderDecisionsTab();
   renderMarketing();
+  renderHRTab();
   // Auto-kereslet ha scan betöltve
   if (megaScanData && megaScanData.market && !keresletData) {
     loadDefaultKereslet();
@@ -4428,8 +4442,10 @@ function renderMarketing() {
   }
 
   function chScore(spend, params) {
-    const eff = Math.max(0, params.base + spend);
-    return params.w * (1 - Math.exp(-eff / params.mean));
+    // base pozitív (awareness): 0 költésnél is van hatás
+    // base negatív (loyalty): költeni KELL hogy legyen hatás, nélküle csökken
+    // A score negatív is lehet (márkahűség romlik ha nem költesz)
+    return params.w * (1 - Math.exp(-(params.base + spend) / params.mean));
   }
 
   function dualOptimize(budget, awW, lyW) {
@@ -4629,6 +4645,213 @@ function updateMktDual() {
   html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Súlyozás: Awareness ×' + awW.toFixed(1) + ' | Loyalty ×' + lyW.toFixed(1) + ' | ' + rounds + ' kör hátra</div>';
 
   document.getElementById('mktDualResult').innerHTML = html;
+}
+
+function renderHRTab() {
+  const el = document.getElementById('hrTabContent');
+  if (!el) return;
+
+  // Current state from Excel
+  const rows = getRows();
+  const adminStart = findRowContains(rows, 'Adminisztráció');
+  const rLetszamStart = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Létszám periódus elején', 20) : -1;
+  const rLetszamEnd = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Létszám periódus végén', 20) : -1;
+  const rKihaszn = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Személyi kihasználtság', 20) : -1;
+  const rBer = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Bérek / fő', 20) : -1;
+  const rKepzes = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Képzési költség / fő', 20) : -1;
+  const rFluk = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Fluktuáció', 20) : -1;
+
+  const curLetszam = rLetszamEnd > -1 ? jtrVal(rows, rLetszamEnd) : 459;
+  const curBer = rBer > -1 ? jtrVal(rows, rBer) : 930;
+  const curKepzes = rKepzes > -1 ? jtrVal(rows, rKepzes) : 45;
+  const curKihaszn = rKihaszn > -1 ? jtrVal(rows, rKihaszn) : 59.66;
+  const curFluk = rFluk > -1 ? Math.abs(jtrVal(rows, rFluk)) : 69;
+
+  // Giga scan params
+  const hrParams = megaScanData?.hr || {};
+  const tuloraMulti = hrParams?.tuloraMulti || hrParams?.worker?.overuse || 3.5;
+
+  // Empirical formulas (A piac, 98 mérés)
+  function calcFluk(wage) {
+    if (wage <= 570) return -138;
+    return -Math.round(50.36 * Math.pow(1176 / wage, 1.368));
+  }
+  function calcKihaszn(letszam, training) {
+    return 35.40 + 7948 / Math.max(1,letszam) + 1250.7 / (Math.max(0,training) + 22.14);
+  }
+  function calcCost(wage, hire, training, letszamStart) {
+    const fluk = calcFluk(wage);
+    const letszam = Math.max(1, letszamStart + hire + fluk);
+    const kih = calcKihaszn(letszam, training);
+    const szemKtg = letszam * wage;
+    const kepzKtg = letszam * training;
+    const adminKtg = (Math.abs(fluk) + Math.abs(hire)) * 200;
+    const tulora = kih > 100 ? letszam * wage * ((kih - 100) / 100) * tuloraMulti : 0;
+    return { wage, hire, training, fluk, letszam, kih, szemKtg, kepzKtg, adminKtg, tulora, osszKtg: szemKtg + kepzKtg + adminKtg + tulora };
+  }
+
+  let html = '';
+
+  // === A: Jelenlegi állapot ===
+  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">';
+  [{l:'Létszám',v:Math.round(curLetszam),c:'var(--accent-green)'},{l:'Bér/fő',v:Math.round(curBer),c:'var(--accent-blue)'},{l:'Képzés/fő',v:Math.round(curKepzes),c:'#7c3aed'},{l:'Kihasználtság',v:curKihaszn.toFixed(1)+'%',c:curKihaszn>95?'var(--accent-red)':curKihaszn<70?'var(--accent-orange)':'var(--accent-green)'},{l:'Fluktuáció',v:'-'+Math.round(curFluk),c:'var(--accent-red)'}].forEach(k => {
+    html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:10px 16px;border-left:3px solid '+k.c+';min-width:100px;">';
+    html += '<div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">'+k.l+'</div>';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--text-primary);">'+k.v+'</div></div>';
+  });
+  html += '</div>';
+
+  // === B: Szimulátor ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--accent-green);margin-bottom:10px;">HR Szimulátor</div>';
+  html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">';
+  html += '<div style="flex:1;min-width:120px;"><label style="font-size:11px;color:var(--text-muted);display:block;">Bér/fő</label><input type="range" id="hrSimWage" min="450" max="1200" step="10" value="'+Math.round(curBer)+'" oninput="updateHRSim()" style="width:100%;accent-color:var(--accent-green);"><div id="hrSimWageVal" style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">'+Math.round(curBer)+'</div></div>';
+  html += '<div style="flex:1;min-width:120px;"><label style="font-size:11px;color:var(--text-muted);display:block;">Felvétel/Elbocsátás</label><input type="range" id="hrSimHire" min="-80" max="100" step="1" value="0" oninput="updateHRSim()" style="width:100%;accent-color:var(--accent-blue);"><div id="hrSimHireVal" style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">0</div></div>';
+  html += '<div style="flex:1;min-width:120px;"><label style="font-size:11px;color:var(--text-muted);display:block;">Képzés/fő</label><input type="range" id="hrSimTrain" min="0" max="120" step="5" value="'+Math.round(curKepzes)+'" oninput="updateHRSim()" style="width:100%;accent-color:#7c3aed;"><div id="hrSimTrainVal" style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">'+Math.round(curKepzes)+'</div></div>';
+  html += '</div>';
+  html += '<div id="hrSimResult"></div>';
+  html += '</div>';
+
+  // === C: Cél kihasználtság optimizer ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--accent-orange);margin-bottom:10px;">Cél kihasználtság → Optimális beállítás</div>';
+  html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">';
+  html += '<label style="font-weight:500;">Cél:</label>';
+  html += '<input type="range" id="hrTargetSlider" min="65" max="98" step="1" value="85" oninput="updateHRTarget()" style="flex:1;min-width:150px;accent-color:var(--accent-orange);">';
+  html += '<span id="hrTargetVal" style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--accent-orange);min-width:50px;">85%</span>';
+  html += '</div>';
+  html += '<div id="hrTargetResult" style="margin-top:10px;"></div>';
+  html += '</div>';
+
+  // === D: Többkörös tanácsadás ===
+  html += '<div style="background:var(--surface);border:2px solid var(--accent-green);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Többkörös HR terv</div>';
+  html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">A képzés hatása halmozódik: magasabb képzettségi szint → jobb kihasználtság. Az utolsó körben képzés 0-ra állítható (megtakarítás).</div>';
+  html += '<div id="hrMultiPlan"></div>';
+  html += '</div>';
+
+  // === E: Modell információk ===
+  html += '<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border);">';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Modell információk <span class="info-btn" onclick="showInfo(\'HR Modellek\',\'<b>Fluktuáció</b> (98 mérés, R²=0.999):<br>|fluk| = 50.36 × (1176/bér)^1.368<br>Plafon: -138 ha bér ≤ 570<br><br><b>Kihasználtság</b> (51 mérés, R²=0.989):<br>kih% = 35.40 + 7948/létszám + 1250.7/(képzés+22.14)<br><br><b>Túlóra</b>: ha kih > 100% → létszám × bér × (kih-100)/100 × 3.5<br><br><b>Admin ktg</b>: (|fluk| + |felvétel|) × 200/fő\')">i</span></div>';
+  if (megaScanData?.hr) {
+    const h = megaScanData.hr;
+    html += '<div style="font-size:11px;color:var(--text-secondary);line-height:1.8;">';
+    html += '<b>Giga Scan paraméterek:</b><br>';
+    html += 'Start létszám: ' + (h.startLetszam || h.worker?.start || '?') + ' | ';
+    html += 'Túlóra szorzó: ' + (h.tuloraMulti || h.worker?.overuse || '?') + '× | ';
+    html += 'Fluktuáció rugalmasság: ' + (h.fluktuacio?.rugalmassag || h.worker?.fluctuation?.elas || '?') + '<br>';
+    html += 'Képzés hatékonyság: ' + (h.kepzes?.hatekonysag || h.worker?.training?.efficiency || '?') + ' | ';
+    html += 'Új felvétel képzettség: ' + JSON.stringify(h.kepzes?.ujFelvetelSzint || h.worker?.training?.hireLvl?.slice(0,4) || '?');
+    html += '</div>';
+  }
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  // Store calc functions globally
+  window._hrCalcFluk = calcFluk;
+  window._hrCalcKihaszn = calcKihaszn;
+  window._hrCalcCost = calcCost;
+  window._hrCurLetszam = curLetszam;
+
+  // Initial calcs
+  updateHRSim();
+  updateHRTarget();
+  renderHRMultiPlan();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// HR event handlers
+function updateHRSim() {
+  const wage = parseInt(document.getElementById('hrSimWage')?.value) || 930;
+  const hire = parseInt(document.getElementById('hrSimHire')?.value) || 0;
+  const train = parseInt(document.getElementById('hrSimTrain')?.value) || 45;
+  document.getElementById('hrSimWageVal').textContent = wage;
+  document.getElementById('hrSimHireVal').textContent = hire >= 0 ? '+'+hire : hire;
+  document.getElementById('hrSimTrainVal').textContent = train;
+
+  const r = window._hrCalcCost(wage, hire, train, window._hrCurLetszam);
+  const kihColor = r.kih > 100 ? 'var(--accent-red)' : r.kih > 95 ? 'var(--accent-orange)' : r.kih < 70 ? 'var(--accent-blue)' : 'var(--accent-green)';
+
+  let html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+  [{l:'Fluktuáció',v:r.fluk},{l:'Létszám végén',v:Math.round(r.letszam)},{l:'Kihasználtság',v:r.kih.toFixed(1)+'%',c:kihColor},{l:'Személyi ktg',v:Math.round(r.szemKtg).toLocaleString()},{l:'Képzési ktg',v:Math.round(r.kepzKtg).toLocaleString()},{l:'Admin ktg',v:Math.round(r.adminKtg).toLocaleString()},{l:'Túlóra ktg',v:Math.round(r.tulora).toLocaleString(),c:r.tulora>0?'var(--accent-red)':undefined},{l:'ÖSSZESEN',v:Math.round(r.osszKtg).toLocaleString(),c:'var(--accent-green)'}].forEach(k => {
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;min-width:90px;text-align:center;">';
+    html += '<div style="font-size:9px;color:var(--text-muted);">'+k.l+'</div>';
+    html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:600;color:'+(k.c||'var(--text-primary)')+';">'+k.v+'</div></div>';
+  });
+  html += '</div>';
+  document.getElementById('hrSimResult').innerHTML = html;
+}
+
+function updateHRTarget() {
+  const target = parseInt(document.getElementById('hrTargetSlider')?.value) || 85;
+  document.getElementById('hrTargetVal').textContent = target + '%';
+
+  // Grid search: find cheapest combo that hits target ±2%
+  const letszam = window._hrCurLetszam;
+  let best = null;
+  for (let w = 450; w <= 1000; w += 50) {
+    for (let h = -60; h <= 80; h += 10) {
+      for (let t = 0; t <= 100; t += 10) {
+        const r = window._hrCalcCost(w, h, t, letszam);
+        if (r.kih >= target - 2 && r.kih <= target + 3 && r.kih <= 100) {
+          if (!best || r.osszKtg < best.osszKtg) best = r;
+        }
+      }
+    }
+  }
+
+  let html = '';
+  if (best) {
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
+    html += '<span style="font-size:12px;color:var(--text-muted);">Optimális:</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Bér ' + best.wage + '</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Felvétel ' + (best.hire>=0?'+':'') + best.hire + '</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Képzés ' + best.training + '</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">→ ' + best.kih.toFixed(1) + '%</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:var(--accent-green);">Ktg: ' + Math.round(best.osszKtg).toLocaleString() + '</span>';
+    html += '</div>';
+  } else {
+    html = '<div style="color:var(--text-muted);">Nem található megoldás erre a célra.</div>';
+  }
+  document.getElementById('hrTargetResult').innerHTML = html;
+}
+
+function renderHRMultiPlan() {
+  const el = document.getElementById('hrMultiPlan');
+  if (!el) return;
+  const letszam = window._hrCurLetszam;
+  const periods = (megaScanData?.meta?.period?.final || 4) - (megaScanData?.meta?.period?.current || 2) + 1;
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:5px;">Kör</th><th>Bér</th><th>Felvétel</th><th>Képzés</th><th>Fluk</th><th>Létszám</th><th>Kih%</th><th>Költség</th><th>Tanács</th></tr>';
+
+  let currentLet = letszam;
+  for (let p = 0; p < Math.min(periods, 3); p++) {
+    const isLast = p === periods - 1;
+    // Strategy: gradually reduce costs, last round minimize
+    const wage = isLast ? 450 : (p === 0 ? 700 : 600);
+    const hire = 0;
+    const train = isLast ? 0 : (p === 0 ? 30 : 20);
+    const r = window._hrCalcCost(wage, hire, train, currentLet);
+    const advice = isLast ? 'Utolsó kör: minimalizálás!' : (r.kih > 95 ? 'Figyelem: szoros kapacitás' : r.kih < 65 ? 'Felesleges kapacitás — elbocsátás?' : 'OK tartomány');
+    const advColor = isLast ? 'var(--accent-red)' : r.kih > 95 ? 'var(--accent-orange)' : r.kih < 65 ? 'var(--accent-blue)' : 'var(--accent-green)';
+
+    html += '<tr style="border-bottom:1px solid var(--border-light);">';
+    html += '<td style="padding:5px;font-weight:600;">P' + (parseInt(megaScanData?.meta?.period?.current || 2) + p) + (isLast?' (utolsó)':'') + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + wage + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + hire + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + train + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;color:var(--accent-red);">' + r.fluk + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + Math.round(r.letszam) + '</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;">' + r.kih.toFixed(1) + '%</td>';
+    html += '<td style="text-align:center;font-family:\'JetBrains Mono\',monospace;font-weight:600;">' + Math.round(r.osszKtg).toLocaleString() + '</td>';
+    html += '<td style="font-size:11px;color:' + advColor + ';">' + advice + '</td>';
+    html += '</tr>';
+    currentLet = r.letszam;
+  }
+  html += '</table>';
+  el.innerHTML = html;
 }
 
 // Init Lucide icons after DOM
