@@ -150,6 +150,41 @@ table.k-table td.best { color: #2d6a4f; font-weight: bold; }
   </div>
 </div>
 
+<!-- Awareness + Loyalty Calculator -->
+<div class="card green-border">
+  <h2>Awareness & Loyalty Optimalizátor</h2>
+  <p style="font-size:0.85rem;color:#6b6b6b;margin-bottom:14px;">Az awareness az azonnali márkaismertség (perióduson belül hat). A loyalty a márkahűség (halmozódik, de ha nem költesz, csökken). A játék vége felé a loyalty kevésbé fontos.</p>
+
+  <div class="row" style="margin-bottom:16px;">
+    <div class="input-group">
+      <label>Marketing büdzsé</label>
+      <input type="number" id="dualBudget" value="357000" step="10000" style="width:140px;" oninput="calcDual()">
+    </div>
+    <div class="input-group">
+      <label>Hátralévő körök</label>
+      <select id="remainingRounds" onchange="calcDual()" style="padding:6px 10px;border:1px solid #e5e2dc;border-radius:6px;font-family:'DM Sans',sans-serif;">
+        <option value="3">3 kör (P2 döntés)</option>
+        <option value="2">2 kör (P3 döntés)</option>
+        <option value="1" selected>1 kör (utolsó)</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Mód</label>
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-green active" id="modeCombined" onclick="setDualMode('combined')">Kombinált</button>
+        <button class="btn btn-green" id="modeAwareness" onclick="setDualMode('awareness')">Awareness</button>
+        <button class="btn btn-green" id="modeLoyalty" onclick="setDualMode('loyalty')">Loyalty</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="dualResults"></div>
+
+  <!-- Per-channel breakdown -->
+  <div id="dualBreakdown" style="margin-top:16px;"></div>
+</div>
+
 <!-- 3. Büdzsé Optimalizátor -->
 <div class="card">
   <h2>Optimális elosztás</h2>
@@ -621,6 +656,139 @@ function updateSummaryTable() {
   });
 }
 
+// === DUAL AWARENESS/LOYALTY MODEL ===
+const AWARENESS = {
+  tv:      { mean: 200000, base: 55000,  weight: 0.20 },
+  online:  { mean: 220000, base: 55000,  weight: 0.40 },
+  offline: { mean: 300000, base: 30000,  weight: 0.20 },
+  pr:      { mean: 500000, base: 20000,  weight: 0.12 },
+  csr:     { mean: 90000,  base: 50000,  weight: 0.08 },
+};
+const LOYALTY = {
+  tv:      { mean: 210000, base: -50000, weight: 0.15 },
+  online:  { mean: 240000, base: -60000, weight: 0.25 },
+  offline: { mean: 280000, base: -70000, weight: 0.10 },
+  pr:      { mean: 290000, base: -80000, weight: 0.22 },
+  csr:     { mean: 230000, base: -90000, weight: 0.28 },
+};
+const EFFICIENCY = { awareness: 7, loyalty: 0.5 };
+const CH_NAMES = { tv: 'TV', online: 'Online', offline: 'Offline', pr: 'PR', csr: 'CSR' };
+const DUAL_CH_COLORS = { tv: '#2d6a4f', online: '#d4763a', offline: '#3a7bd5', pr: '#7c3aed', csr: '#64748b' };
+
+let dualMode = 'combined';
+
+function setDualMode(mode) {
+  dualMode = mode;
+  document.querySelectorAll('#modeCombined,#modeAwareness,#modeLoyalty').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  calcDual();
+}
+
+function channelScore(spend, params) {
+  const effective = Math.max(0, params.base + spend);
+  return params.weight * (1 - Math.exp(-effective / params.mean));
+}
+
+function calcDualScore(allocation, type) {
+  const params = type === 'awareness' ? AWARENESS : LOYALTY;
+  let total = 0;
+  for (const [ch, spend] of Object.entries(allocation)) {
+    total += channelScore(spend, params[ch]);
+  }
+  return total;
+}
+
+function optimizeDual(budget, awarenessWeight, loyaltyWeight) {
+  const alloc = { tv: 0, online: 0, offline: 0, pr: 0, csr: 0 };
+  const step = 5000;
+  let remaining = budget;
+
+  while (remaining >= step) {
+    let bestCh = null;
+    let bestGain = -Infinity;
+
+    for (const ch of Object.keys(alloc)) {
+      const oldA = channelScore(alloc[ch], AWARENESS[ch]);
+      const newA = channelScore(alloc[ch] + step, AWARENESS[ch]);
+      const oldL = channelScore(alloc[ch], LOYALTY[ch]);
+      const newL = channelScore(alloc[ch] + step, LOYALTY[ch]);
+      const gain = awarenessWeight * (newA - oldA) * EFFICIENCY.awareness + loyaltyWeight * (newL - oldL) * EFFICIENCY.loyalty;
+
+      if (gain > bestGain) {
+        bestGain = gain;
+        bestCh = ch;
+      }
+    }
+
+    if (bestCh === null || bestGain <= 0) break;
+    alloc[bestCh] += step;
+    remaining -= step;
+  }
+  return alloc;
+}
+
+function calcDual() {
+  const budget = parseInt(document.getElementById('dualBudget').value) || 357000;
+  const remaining = parseInt(document.getElementById('remainingRounds').value) || 1;
+
+  let aW, lW;
+  if (dualMode === 'awareness') { aW = 1; lW = 0; }
+  else if (dualMode === 'loyalty') { aW = 0; lW = 1; }
+  else { aW = 1; lW = remaining * 0.5; }
+
+  const alloc = optimizeDual(budget, aW, lW);
+  const aScore = calcDualScore(alloc, 'awareness');
+  const lScore = calcDualScore(alloc, 'loyalty');
+
+  let html = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">';
+  html += '<div style="background:#fafaf8;border:1px solid #e5e2dc;border-radius:10px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">';
+  html += '<div style="font-size:0.75rem;color:#6b6b6b;text-transform:uppercase;">Awareness score</div>';
+  html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.5rem;font-weight:700;color:#2d6a4f;">' + (aScore * EFFICIENCY.awareness).toFixed(1) + '</div>';
+  html += '<div style="font-size:0.7rem;color:#6b6b6b;">×' + EFFICIENCY.awareness + ' szorzó</div></div>';
+
+  html += '<div style="background:#fafaf8;border:1px solid #e5e2dc;border-radius:10px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">';
+  html += '<div style="font-size:0.75rem;color:#6b6b6b;text-transform:uppercase;">Loyalty score</div>';
+  html += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:1.5rem;font-weight:700;color:#d4763a;">' + (lScore * EFFICIENCY.loyalty).toFixed(2) + '</div>';
+  html += '<div style="font-size:0.7rem;color:#6b6b6b;">×' + EFFICIENCY.loyalty + ' szorzó</div></div>';
+
+  html += '<div style="background:#fafaf8;border:1px solid #e5e2dc;border-radius:10px;padding:14px 20px;text-align:center;flex:1;min-width:120px;">';
+  html += '<div style="font-size:0.75rem;color:#6b6b6b;text-transform:uppercase;">Súlyozás</div>';
+  html += '<div style="font-size:0.9rem;color:#1a1a1a;margin-top:4px;">Awareness: <b>' + aW.toFixed(1) + '</b></div>';
+  html += '<div style="font-size:0.9rem;color:#1a1a1a;">Loyalty: <b>' + lW.toFixed(1) + '</b></div>';
+  html += '<div style="font-size:0.7rem;color:#6b6b6b;margin-top:2px;">' + remaining + ' kör hátra</div></div>';
+  html += '</div>';
+
+  document.getElementById('dualResults').innerHTML = html;
+
+  let bhtml = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+  bhtml += '<tr style="border-bottom:2px solid #e5e2dc;"><th style="text-align:left;padding:6px;">Csatorna</th><th style="text-align:right;">Összeg</th><th style="text-align:right;">Awareness</th><th style="text-align:right;">Loyalty</th><th style="text-align:right;">Összesített</th></tr>';
+
+  let totalSpend = 0;
+  for (const [ch, spend] of Object.entries(alloc)) {
+    const aS = channelScore(spend, AWARENESS[ch]) * EFFICIENCY.awareness;
+    const lS = channelScore(spend, LOYALTY[ch]) * EFFICIENCY.loyalty;
+    const combined = aW * aS + lW * lS;
+    totalSpend += spend;
+
+    bhtml += '<tr style="border-bottom:1px solid #f0eeea;">';
+    bhtml += '<td style="padding:6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + DUAL_CH_COLORS[ch] + ';margin-right:6px;"></span><b>' + CH_NAMES[ch] + '</b></td>';
+    bhtml += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;font-weight:600;">' + (spend > 0 ? (spend/1000).toFixed(0) + 'k' : '—') + '</td>';
+    bhtml += '<td style="text-align:right;color:#2d6a4f;font-family:\'JetBrains Mono\',monospace;">' + aS.toFixed(2) + '</td>';
+    bhtml += '<td style="text-align:right;color:#d4763a;font-family:\'JetBrains Mono\',monospace;">' + lS.toFixed(2) + '</td>';
+    bhtml += '<td style="text-align:right;font-weight:700;font-family:\'JetBrains Mono\',monospace;">' + combined.toFixed(2) + '</td>';
+    bhtml += '</tr>';
+  }
+  bhtml += '<tr style="border-top:2px solid #e5e2dc;font-weight:700;">';
+  bhtml += '<td style="padding:6px;">ÖSSZESEN</td>';
+  bhtml += '<td style="text-align:right;font-family:\'JetBrains Mono\',monospace;">' + (totalSpend/1000).toFixed(0) + 'k</td>';
+  bhtml += '<td style="text-align:right;color:#2d6a4f;">' + (aScore * EFFICIENCY.awareness).toFixed(2) + '</td>';
+  bhtml += '<td style="text-align:right;color:#d4763a;">' + (lScore * EFFICIENCY.loyalty).toFixed(2) + '</td>';
+  bhtml += '<td></td></tr>';
+  bhtml += '</table>';
+
+  document.getElementById('dualBreakdown').innerHTML = bhtml;
+}
+
 // === MASTER UPDATE ===
 function onParamChange() {
   runOptimizer();
@@ -633,6 +801,7 @@ function onParamChange() {
 // === INIT ===
 buildSliders();
 loadPreset('selejtező_A');
+calcDual();
 </script>
 </body>
 </html>
