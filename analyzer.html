@@ -4726,7 +4726,7 @@ function renderHRTab() {
   html += '<div style="font-size:14px;font-weight:700;color:var(--accent-orange);margin-bottom:10px;">Cél kihasználtság → Optimális beállítás</div>';
   html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">';
   html += '<label style="font-weight:500;">Cél:</label>';
-  html += '<input type="range" id="hrTargetSlider" min="65" max="98" step="1" value="85" oninput="updateHRTarget()" style="flex:1;min-width:150px;accent-color:var(--accent-orange);">';
+  html += '<input type="range" id="hrTargetSlider" min="80" max="150" step="1" value="100" oninput="updateHRTarget()" style="flex:1;min-width:150px;accent-color:var(--accent-orange);">';
   html += '<span id="hrTargetVal" style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--accent-orange);min-width:50px;">85%</span>';
   html += '</div>';
   html += '<div id="hrTargetResult" style="margin-top:10px;"></div>';
@@ -4799,32 +4799,42 @@ function updateHRTarget() {
   const target = parseInt(document.getElementById('hrTargetSlider')?.value) || 85;
   document.getElementById('hrTargetVal').textContent = target + '%';
 
-  // Grid search: find cheapest combo that hits target ±2%
+  // Grid search: find cheapest combo that hits target
   const letszam = window._hrCurLetszam;
-  let best = null;
-  for (let w = 450; w <= 1000; w += 50) {
-    for (let h = -60; h <= 80; h += 10) {
-      for (let t = 0; t <= 100; t += 10) {
+  const results = [];
+  for (let w = 450; w <= 1100; w += 25) {
+    for (let h = -40; h <= 150; h += 5) {
+      for (let t = 0; t <= 80; t += 5) {
         const r = window._hrCalcCost(w, h, t, letszam);
-        if (r.kih >= target - 2 && r.kih <= target + 3 && r.kih <= 100) {
-          if (!best || r.osszKtg < best.osszKtg) best = r;
+        if (r.letszam > 30 && r.kih >= target - 3 && r.kih <= target + 5) {
+          results.push(r);
         }
       }
     }
   }
+  results.sort((a,b) => a.osszKtg - b.osszKtg);
+  const best = results[0] || null;
 
   let html = '';
-  if (best) {
-    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">';
-    html += '<span style="font-size:12px;color:var(--text-muted);">Optimális:</span>';
-    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Bér ' + best.wage + '</span>';
-    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Felvétel ' + (best.hire>=0?'+':'') + best.hire + '</span>';
-    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">Képzés ' + best.training + '</span>';
-    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600;">→ ' + best.kih.toFixed(1) + '%</span>';
-    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:var(--accent-green);">Ktg: ' + Math.round(best.osszKtg).toLocaleString() + '</span>';
-    html += '</div>';
+  if (results.length > 0) {
+    // Top 3 megoldás
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Top ' + Math.min(3, results.length) + ' legolcsóbb megoldás (' + results.length + ' találat):</div>';
+    results.slice(0, 3).forEach((r, i) => {
+      const isBest = i === 0;
+      const kihColor = r.kih > 100 ? 'var(--accent-orange)' : 'var(--accent-green)';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0;' + (isBest?'font-weight:600;':'color:var(--text-secondary);') + '">';
+      html += '<span style="width:16px;text-align:center;">' + (isBest?'★':'') + '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;">Bér ' + r.wage + '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;">Felv ' + (r.hire>=0?'+':'') + r.hire + '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;">Képz ' + r.training + '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;">→ Lét ' + Math.round(r.letszam) + '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;color:' + kihColor + ';">' + r.kih.toFixed(1) + '%</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace;color:var(--accent-green);font-weight:700;">' + Math.round(r.osszKtg).toLocaleString() + ' Ft</span>';
+      if (r.tulora > 0) html += '<span style="font-size:10px;color:var(--accent-red);">+túlóra ' + Math.round(r.tulora).toLocaleString() + '</span>';
+      html += '</div>';
+    });
   } else {
-    html = '<div style="color:var(--text-muted);">Nem található megoldás erre a célra.</div>';
+    html = '<div style="color:var(--text-muted);">Nem található megoldás erre a célra. Próbálj magasabb %-ot.</div>';
   }
   document.getElementById('hrTargetResult').innerHTML = html;
 }
