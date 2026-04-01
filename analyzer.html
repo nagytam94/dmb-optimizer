@@ -1220,12 +1220,15 @@ function detectTeams(rows) {
 }
 
 function detectJTR(teams) {
-  // Find which team is "ours" - look for "JTR"
+  // Find which team is "ours" - look for team name from scan or "JTR"
+  const myTeam = megaScanData?.meta?.myTeam;
+  if (typeof myTeam === 'number' && myTeam >= 0 && myTeam < teams.length) return myTeam;
+  const myName = megaScanData?.meta?.teams?.[0] || 'JTR';
   for (let i = 0; i < teams.length; i++) {
-    if (teams[i].toUpperCase() === 'JTR') return i;
+    if (teams[i].toUpperCase() === 'JTR' || teams[i] === myName) return i;
   }
-  // Fallback: default to index 2
-  return Math.min(2, teams.length - 1);
+  // Fallback: first team (index 0)
+  return 0;
 }
 let allData = {}; // {sheetName: parsedData}
 let currentPeriod = '0';
@@ -1260,12 +1263,29 @@ function handleFile(file) {
           for(const[k,v]of Object.entries(megaScanData.hitelek))megaScanData.market.loans[lN[k]||k]={demand:v.kereslet,pref:v.pref};
           for(const[k,v]of Object.entries(megaScanData.betetek||{}))megaScanData.market.deposits[dN[k]||k]={demand:v.kereslet,pref:v.pref};
         }
-        // Giga scan v2 additional normalizations
+        // Additional normalizations (v2/v3 compatible)
         if (megaScanData.finance) megaScanData._finance = megaScanData.finance;
         if (megaScanData.jelzalogPiac) megaScanData._jelzalogPiac = megaScanData.jelzalogPiac;
-        if (megaScanData.elasticity) megaScanData._elasticity = megaScanData.elasticity;
         if (megaScanData.projRules) megaScanData._projRules = megaScanData.projRules;
         if (megaScanData.projEff) megaScanData._projEff = megaScanData.projEff;
+        // Elasticity: v2={minden_termek:[...], NOTE}, v3=[...] → normalize to array
+        if (megaScanData.elasticity) {
+          megaScanData._elasticity = Array.isArray(megaScanData.elasticity)
+            ? megaScanData.elasticity
+            : (megaScanData.elasticity.minden_termek || [2, 2, 2]);
+        }
+        // RV base: v3 uses rv.asset.value, v2 uses rv.base → normalize
+        if (megaScanData.rvFormula?.asset?.value && !megaScanData.rvFormula.base) {
+          megaScanData.rvFormula.base = megaScanData.rvFormula.asset.value;
+        }
+        // HR/IT/Marketing: if missing from top level, try to extract from v2 structure
+        // (v3 only has these nested in dontesek, v2 has them at top level)
+        if (!megaScanData.hr && megaScanData.finance) {
+          // v3 format: no top-level hr — leave null, dashboard uses Excel fallback
+        }
+        if (!megaScanData.marketing && megaScanData.finance) {
+          // v3 format: no top-level marketing params — leave null, dashboard uses model defaults
+        }
       } catch(err) { alert('Hibás JSON: ' + err.message); return; }
 
       // Status update
@@ -1413,7 +1433,7 @@ function jtrVal(rows, rowIdx) { return val(rows, rowIdx, JTR); }
 
 function othersAvg(rows, rowIdx) {
   let sum = 0, cnt = 0;
-  for(let i=0; i<5; i++) {
+  for(let i=0; i<TEAMS.length; i++) {
     if(i === JTR) continue;
     const v = val(rows, rowIdx, i);
     if(v !== 0 || true) { sum += v; cnt++; }
@@ -1459,6 +1479,27 @@ function getFieldInBlock(rows, blockStart, fieldName, maxSearch=20) {
     if(cell.includes(l)) return i;
   }
   return -1;
+}
+
+// ===== DECISION HELPERS (global) =====
+// Get the latest period key from a team's decision object (P1, P2, P3... excluding _terv)
+function getLatestPeriodKey(teamDec) {
+  if (!teamDec) return null;
+  const keys = Object.keys(teamDec).filter(k => !k.includes('terv'));
+  if (keys.length === 0) return null;
+  return keys.sort((a,b) => {
+    const na = parseInt(a.replace(/\D/g,'')) || 0;
+    const nb = parseInt(b.replace(/\D/g,'')) || 0;
+    return nb - na;
+  })[0];
+}
+// Get the latest period decisions for a team from megaScanData
+function getTeamDec(t) {
+  const decisions = megaScanData?.decisions || megaScanData?.dontesek || {};
+  const td = decisions[t];
+  if (!td) return null;
+  const pk = getLatestPeriodKey(td);
+  return pk ? td[pk] : null;
 }
 
 // ===== RV FORMULA =====
@@ -2005,7 +2046,7 @@ function renderBetetForras(rows) {
 
   // JTR összesítő vs átlag
   const jtrTotalBetet = teamTotalBetet[JTR];
-  const avgTotalBetet = teamTotalBetet.filter((_,i) => i!==JTR).reduce((s,v) => s+v, 0) / 4;
+  const others = teamTotalBetet.filter((_,i) => i!==JTR); const avgTotalBetet = others.length > 0 ? others.reduce((s,v) => s+v, 0) / others.length : 0;
   const betetDiffPct = avgTotalBetet > 0 ? ((jtrTotalBetet - avgTotalBetet) / avgTotalBetet * 100) : 0;
   html += `<div style="margin-top:8px; font-size:13px;">JTR össz betét vs Átlag: <strong>${fmtN(jtrTotalBetet)}</strong> vs <strong>${fmtN(avgTotalBetet)}</strong> (<span class="${betetDiffPct >= 0 ? 'pos' : 'neg'}">${betetDiffPct >= 0 ? '+' : ''}${betetDiffPct.toFixed(1)}%</span>)</div>`;
 
@@ -4022,7 +4063,7 @@ function scanKeresletFromGame() {
 function renderKereslet() {
   if(!keresletData) return;
   const el = document.getElementById('keresletContent');
-  const bk = keresletData.meta?.bankkoziHitel || 3.7;
+  const bk = keresletData.meta?.bankkoziHitel || megaScanData?.rates?.bankkoziHitel?.[0] || 3.5;
 
   let html = `<div style="margin-bottom:10px;font-size:12px;color:var(--text-muted);">Forrás: ${keresletData.meta?.source||'?'} | Bankközi hitel: ${bk}%</div>`;
 
@@ -4112,7 +4153,7 @@ function renderKereslet() {
     const sorted = Object.entries(d.pref).sort((a,b) => b[1]-a[1]);
     // Promó% = promó / teljes betétállomány (nem új betét!)
     // Állomány becslés: P0 stock ≈ demand / csapatszám × lejárat_szorzó (de inkább p0 adatból)
-    const teamCount = keresletData.meta?.teams?.length || 4;
+    const teamCount = keresletData.meta?.teams?.length || TEAMS.length || 4;
     const ourNewDep = d.demand[0] / teamCount;  // kb. mi részünk az új betétből
     const stockEstimate = ourNewDep * Math.min(d.mat, 4); // állomány becslés = new × lejárat
     const promoPct = (d.p0 && stockEstimate > 0) ? (d.p0.promo / stockEstimate * 100) : 0;
@@ -4418,24 +4459,6 @@ function renderDecisionsTab() {
   const decisions = megaScanData.decisions || megaScanData.dontesek || {};
   const teamNames = Object.keys(decisions);
   if (teamNames.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);">Nincs ellenfél döntési adat a betöltött JSON-ban.</p>'; return; }
-  // Detect latest period key per team (P1, P2, P3... — NOT _terv)
-  function getLatestPeriodKey(teamDec) {
-    if (!teamDec) return null;
-    const keys = Object.keys(teamDec).filter(k => !k.includes('terv'));
-    if (keys.length === 0) return null;
-    return keys.sort((a,b) => {
-      const na = parseInt(a.replace(/\D/g,'')) || 0;
-      const nb = parseInt(b.replace(/\D/g,'')) || 0;
-      return nb - na;
-    })[0];
-  }
-  // Get the latest period decisions for a team
-  function getTeamDec(t) {
-    const td = decisions[t];
-    if (!td) return null;
-    const pk = getLatestPeriodKey(td);
-    return pk ? td[pk] : null;
-  }
   const latestPKey = getLatestPeriodKey(decisions[teamNames[0]]);
   const mono = "font-family:'JetBrains Mono',monospace;";
   const jC = 'background:rgba(212,118,58,0.06);font-weight:700;color:#d4763a;';
