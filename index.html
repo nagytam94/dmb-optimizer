@@ -6,85 +6,115 @@
 <title>DMB 2026 — Marketing Optimalizátor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; min-height: 100vh; }
-a { color: #e94560; text-decoration: none; }
+body { background: #fafaf8; color: #1a1a1a; font-family: 'DM Sans', 'Segoe UI', Tahoma, sans-serif; padding: 20px; min-height: 100vh; }
+a { color: #2d6a4f; text-decoration: none; font-weight: 500; }
 a:hover { text-decoration: underline; }
 
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 10px; }
-.header h1 { color: #f5a623; font-size: 1.6rem; }
-.header a { font-size: 0.95rem; }
+.header h1 { color: #1a1a1a; font-size: 1.6rem; font-weight: 700; }
+.header a { font-size: 0.95rem; color: #2d6a4f; }
 
-.card { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.card h2 { color: #f5a623; margin-bottom: 14px; font-size: 1.15rem; }
-.card.gold-border { border: 2px solid #f5a623; }
+.card { background: #ffffff; border: 1px solid #e5e2dc; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.card h2 { color: #1a1a1a; margin-bottom: 14px; font-size: 1.15rem; font-weight: 600; }
+.card.green-border { border: 2px solid #2d6a4f; }
 
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
 .input-group { display: flex; flex-direction: column; gap: 3px; }
-.input-group label { font-size: 0.78rem; color: #aaa; }
-.input-group input[type="number"] { background: #0f3460; border: 1px solid #335; color: #fff; padding: 6px 10px; border-radius: 6px; width: 100px; font-size: 0.95rem; text-align: center; }
-.input-group input[type="number"]:focus { border-color: #f5a623; outline: none; }
+.input-group label { font-size: 0.78rem; color: #6b6b6b; font-weight: 500; }
+.input-group input[type="number"] { background: #ffffff; border: 1px solid #e5e2dc; color: #1a1a1a; padding: 6px 10px; border-radius: 6px; width: 100px; font-size: 0.95rem; text-align: center; font-family: 'JetBrains Mono', monospace; }
+.input-group input[type="number"]:focus { border-color: #2d6a4f; outline: none; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
 
-.btn { background: #0f3460; border: 1px solid #e94560; color: #e94560; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
-.btn:hover { background: #e94560; color: #fff; }
-.btn.active { background: #e94560; color: #fff; }
-.btn-gold { border-color: #f5a623; color: #f5a623; }
-.btn-gold:hover, .btn-gold.active { background: #f5a623; color: #1a1a2e; }
+.btn { background: #ffffff; border: 1px solid #e5e2dc; color: #1a1a1a; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.2s; }
+.btn:hover { background: #f5f3f0; border-color: #ccc; }
+.btn.active { background: #2d6a4f; color: #fff; border-color: #2d6a4f; }
+.btn-green { border-color: #2d6a4f; color: #2d6a4f; }
+.btn-green:hover, .btn-green.active { background: #2d6a4f; color: #fff; }
+.btn-primary { background: #2d6a4f; color: #fff; border-color: #2d6a4f; }
+.btn-primary:hover { background: #245a42; }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
 
 .alloc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
-.alloc-card { background: #0f3460; border-radius: 10px; padding: 14px; text-align: center; }
-.alloc-card .ch-name { font-size: 0.85rem; color: #aaa; margin-bottom: 4px; }
-.alloc-card .ch-amount { font-size: 1.3rem; font-weight: bold; color: #f5a623; }
-.alloc-card .ch-pct { font-size: 0.85rem; color: #4caf50; }
+.alloc-card { background: #fafaf8; border: 1px solid #e5e2dc; border-radius: 10px; padding: 14px; text-align: center; }
+.alloc-card .ch-name { font-size: 0.85rem; color: #6b6b6b; margin-bottom: 4px; font-weight: 500; }
+.alloc-card .ch-amount { font-size: 1.3rem; font-weight: bold; color: #1a1a1a; font-family: 'JetBrains Mono', monospace; }
+.alloc-card .ch-pct { font-size: 0.85rem; color: #2d6a4f; font-weight: 500; }
 
 .big-number { text-align: center; margin-top: 16px; }
-.big-number .value { font-size: 2.4rem; font-weight: bold; color: #4caf50; }
-.big-number .label { font-size: 0.9rem; color: #aaa; }
+.big-number .value { font-size: 2.4rem; font-weight: bold; color: #2d6a4f; font-family: 'JetBrains Mono', monospace; }
+.big-number .label { font-size: 0.9rem; color: #6b6b6b; }
 
 .slider-group { margin-bottom: 14px; }
 .slider-group label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; }
-.slider-group input[type="range"] { width: 100%; accent-color: #e94560; }
-.slider-group .val { color: #f5a623; font-weight: bold; }
+.slider-group input[type="range"] { width: 100%; accent-color: #2d6a4f; }
+.slider-group .val { color: #d4763a; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
 
-.manual-summary { display: flex; justify-content: space-around; padding: 14px; background: #0f3460; border-radius: 10px; margin-top: 10px; flex-wrap: wrap; gap: 10px; }
+.manual-summary { display: flex; justify-content: space-around; padding: 14px; background: #fafaf8; border: 1px solid #e5e2dc; border-radius: 10px; margin-top: 10px; flex-wrap: wrap; gap: 10px; }
 .manual-summary div { text-align: center; }
-.manual-summary .val { font-size: 1.4rem; font-weight: bold; color: #f5a623; }
-.manual-summary .lbl { font-size: 0.8rem; color: #aaa; }
+.manual-summary .val { font-size: 1.4rem; font-weight: bold; color: #d4763a; font-family: 'JetBrains Mono', monospace; }
+.manual-summary .lbl { font-size: 0.8rem; color: #6b6b6b; }
 
 .chart-container { position: relative; max-height: 350px; }
 
-.formula-box { background: #0f3460; border-radius: 10px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.9rem; line-height: 1.6; overflow-x: auto; }
-.formula-box .highlight { color: #f5a623; }
-.formula-box .red { color: #e94560; }
+.formula-box { background: #fafaf8; border: 1px solid #e5e2dc; border-radius: 10px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; line-height: 1.6; overflow-x: auto; }
+.formula-box .highlight { color: #2d6a4f; font-weight: 600; }
+.formula-box .accent { color: #d4763a; font-weight: 600; }
 
 table.k-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
-table.k-table th, table.k-table td { padding: 8px 10px; border: 1px solid #335; text-align: center; }
-table.k-table th { background: #0f3460; color: #f5a623; }
-table.k-table td { background: #16213e; }
-table.k-table td.best { color: #4caf50; font-weight: bold; }
+table.k-table th, table.k-table td { padding: 8px 10px; border: 1px solid #e5e2dc; text-align: center; }
+table.k-table th { background: #fafaf8; color: #1a1a1a; font-weight: 600; }
+table.k-table td { background: #ffffff; }
+table.k-table td.best { color: #2d6a4f; font-weight: bold; }
 
-.preset-active { background: #f5a623 !important; color: #1a1a2e !important; }
-.note { font-size: 0.85rem; color: #aaa; margin-top: 10px; font-style: italic; }
-.tag { display: inline-block; background: #0f3460; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #f5a623; margin-left: 6px; }
+.preset-active { background: #2d6a4f !important; color: #fff !important; border-color: #2d6a4f !important; }
+.note { font-size: 0.85rem; color: #6b6b6b; margin-top: 10px; font-style: italic; }
+.tag { display: inline-block; background: #fafaf8; border: 1px solid #e5e2dc; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #6b6b6b; margin-left: 6px; }
+
+/* Target section */
+.target-section { background: #f0f7f3; border: 2px solid #2d6a4f; }
+.target-section h2 { color: #2d6a4f; }
+.target-result { margin-top: 14px; padding: 16px; background: #ffffff; border: 1px solid #e5e2dc; border-radius: 10px; }
+.target-result .target-line { font-size: 1.05rem; font-weight: 500; margin-bottom: 8px; }
+.target-result .target-line strong { color: #2d6a4f; font-family: 'JetBrains Mono', monospace; }
+.target-result .target-alloc { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.target-result .target-alloc-item { background: #fafaf8; border: 1px solid #e5e2dc; border-radius: 8px; padding: 6px 12px; font-size: 0.9rem; }
+.target-result .target-alloc-item .ch-label { color: #6b6b6b; font-size: 0.78rem; }
+.target-result .target-alloc-item .ch-val { font-weight: 600; font-family: 'JetBrains Mono', monospace; color: #1a1a1a; }
+
+.target-slider-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.target-slider-row input[type="range"] { flex: 1; min-width: 200px; accent-color: #2d6a4f; }
+.target-slider-row .target-val { font-size: 1.6rem; font-weight: 700; color: #2d6a4f; font-family: 'JetBrains Mono', monospace; min-width: 80px; text-align: center; }
+
+/* Reference table */
+.ref-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.ref-table th, .ref-table td { padding: 6px 10px; border: 1px solid #e5e2dc; text-align: center; }
+.ref-table th { background: #fafaf8; color: #6b6b6b; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.ref-table td { background: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+.ref-table td:first-child { font-family: 'DM Sans', sans-serif; font-weight: 600; text-align: left; }
+
+/* Param table inline inputs */
+.param-input { width: 80px; background: #ffffff; color: #1a1a1a; border: 1px solid #e5e2dc; text-align: center; border-radius: 4px; padding: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+.param-input:focus { border-color: #2d6a4f; outline: none; box-shadow: 0 0 0 2px rgba(45,106,79,0.15); }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>DMB 2026 — Marketing Optimalizátor</h1>
-  <a href="https://nagytam94.github.io/dmb-optimizer/analyzer.html">&larr; Dashboard</a>
+  <a href="analyzer.html">&larr; Vissza a Dashboard-hoz</a>
 </div>
 
 <!-- 1. Piac preset -->
-<div class="card gold-border">
+<div class="card green-border">
   <h2>Piac kiválasztása</h2>
   <div class="row" style="margin-bottom:0;">
-    <button class="btn btn-gold preset-btn" id="btn_selejtező_A" onclick="loadPreset('selejtező_A')">Selejtező A <span class="tag">50 mérés</span></button>
-    <button class="btn btn-gold preset-btn" id="btn_teszt_H" onclick="loadPreset('teszt_H')">Teszt H <span class="tag">65 mérés</span></button>
-    <button class="btn btn-gold preset-btn" id="btn_egyéni" onclick="loadPreset('egyéni')">Egyéni</button>
+    <button class="btn btn-green preset-btn" id="btn_selejtező_A" onclick="loadPreset('selejtező_A')">Selejtező A <span class="tag">50 mérés</span></button>
+    <button class="btn btn-green preset-btn" id="btn_teszt_H" onclick="loadPreset('teszt_H')">Teszt H <span class="tag">65 mérés</span></button>
+    <button class="btn btn-green preset-btn" id="btn_egyéni" onclick="loadPreset('egyéni')">Egyéni</button>
   </div>
   <p class="note" id="presetNote" style="margin-top:10px;"></p>
 </div>
@@ -98,12 +128,25 @@ table.k-table td.best { color: #4caf50; font-weight: bold; }
     </div>
     <table class="k-table" style="margin-top:8px;">
       <tr><th>Csatorna</th><th>a (max hatás)</th><th>K (félérték)</th></tr>
-      <tr><td>TV</td><td><input type="number" id="a_tv" value="12.1952" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_tv" value="229392" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>Online</td><td><input type="number" id="a_online" value="24.2133" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_online" value="241816" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>Offline</td><td><input type="number" id="a_offline" value="14.0718" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_offline" value="350207" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>PR</td><td><input type="number" id="a_pr" value="8.9994" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_pr" value="607109" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
-      <tr><td>CSR</td><td><input type="number" id="a_csr" value="4.0737" step="0.001" style="width:70px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td><td><input type="number" id="k_csr" value="117726" step="1000" style="width:100px;background:#0f3460;color:#fff;border:1px solid #335;text-align:center;" oninput="onParamChange()"></td></tr>
+      <tr><td>TV</td><td><input type="number" id="a_tv" value="12.1952" step="0.001" class="param-input" oninput="onParamChange()"></td><td><input type="number" id="k_tv" value="229392" step="1000" class="param-input" style="width:100px;" oninput="onParamChange()"></td></tr>
+      <tr><td>Online</td><td><input type="number" id="a_online" value="24.2133" step="0.001" class="param-input" oninput="onParamChange()"></td><td><input type="number" id="k_online" value="241816" step="1000" class="param-input" style="width:100px;" oninput="onParamChange()"></td></tr>
+      <tr><td>Offline</td><td><input type="number" id="a_offline" value="14.0718" step="0.001" class="param-input" oninput="onParamChange()"></td><td><input type="number" id="k_offline" value="350207" step="1000" class="param-input" style="width:100px;" oninput="onParamChange()"></td></tr>
+      <tr><td>PR</td><td><input type="number" id="a_pr" value="8.9994" step="0.001" class="param-input" oninput="onParamChange()"></td><td><input type="number" id="k_pr" value="607109" step="1000" class="param-input" style="width:100px;" oninput="onParamChange()"></td></tr>
+      <tr><td>CSR</td><td><input type="number" id="a_csr" value="4.0737" step="0.001" class="param-input" oninput="onParamChange()"></td><td><input type="number" id="k_csr" value="117726" step="1000" class="param-input" style="width:100px;" oninput="onParamChange()"></td></tr>
     </table>
+  </div>
+</div>
+
+<!-- 2b. Cél márka % -->
+<div class="card target-section">
+  <h2>Cél márka % keresés</h2>
+  <div class="target-slider-row">
+    <label style="font-weight:500;white-space:nowrap;">Cél márka%:</label>
+    <input type="range" id="targetSlider" min="25" max="65" step="0.5" value="45" oninput="onTargetChange()">
+    <div class="target-val" id="targetVal">45.0%</div>
+  </div>
+  <div class="target-result" id="targetResult">
+    <div class="target-line">Keresés...</div>
   </div>
 </div>
 
@@ -131,7 +174,7 @@ table.k-table td.best { color: #4caf50; font-weight: bold; }
       <div><div class="lbl">vs Optimális</div><div class="val" id="manualDelta">—</div></div>
     </div>
     <div style="text-align:center;margin-top:12px;">
-      <button class="btn" onclick="resetToOptimal()">Reset optimálisra</button>
+      <button class="btn btn-primary" onclick="resetToOptimal()">Reset optimálisra</button>
       <button class="btn" onclick="resetToDefault()">Reset alapértékre</button>
     </div>
   </div>
@@ -158,7 +201,7 @@ table.k-table td.best { color: #4caf50; font-weight: bold; }
 <div class="card">
   <h2>Modell összefoglaló</h2>
   <div class="formula-box">
-    <span class="highlight">márka%</span> = <span class="red">BASE</span> + &Sigma; (<span class="highlight">a<sub>i</sub></span> &times; (1 - e<sup>-spend<sub>i</sub> / <span class="highlight">K<sub>i</sub></span></sup>))
+    <span class="highlight">márka%</span> = <span class="accent">BASE</span> + &Sigma; (<span class="highlight">a<sub>i</sub></span> &times; (1 - e<sup>-spend<sub>i</sub> / <span class="highlight">K<sub>i</sub></span></sup>))
   </div>
   <table class="k-table" id="summaryTable">
     <tr><th>Csatorna</th><th>a</th><th>K</th><th>a/K hatékonyság</th><th>80% telítés</th><th>Max hatás</th></tr>
@@ -166,11 +209,42 @@ table.k-table td.best { color: #4caf50; font-weight: bold; }
   <p class="note">Az a és K értékek PIACONKÉNT ELTÉRNEK. Minden új piacon újrakalibrálás szükséges (dmbscan skill: 50 teszt &lt; 1 sec).</p>
 </div>
 
+<!-- 6. Giga Scan marketing paraméterek referencia -->
+<div class="card">
+  <h2>Giga Scan marketing referencia paraméterek</h2>
+  <p class="note" style="margin-top:0;margin-bottom:12px;">Awareness és Loyalty csatorna paraméterek a szimulációs modellből. Csak referencia, nem szerkeszthető.</p>
+  <div class="grid-2" style="gap:12px;">
+    <div>
+      <h3 style="font-size:0.95rem;color:#2d6a4f;margin-bottom:8px;">Awareness paraméterek</h3>
+      <table class="ref-table" id="refAwarenessTable">
+        <tr><th>Csatorna</th><th>Mean</th><th>Base</th><th>Weight</th></tr>
+        <tr><td>TV</td><td>0.45</td><td>0.20</td><td>0.25</td></tr>
+        <tr><td>Online</td><td>0.55</td><td>0.15</td><td>0.40</td></tr>
+        <tr><td>Offline</td><td>0.35</td><td>0.18</td><td>0.20</td></tr>
+        <tr><td>PR</td><td>0.25</td><td>0.10</td><td>0.12</td></tr>
+        <tr><td>CSR</td><td>0.20</td><td>0.08</td><td>0.08</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="font-size:0.95rem;color:#d4763a;margin-bottom:8px;">Loyalty paraméterek</h3>
+      <table class="ref-table" id="refLoyaltyTable">
+        <tr><th>Csatorna</th><th>Mean</th><th>Base</th><th>Weight</th></tr>
+        <tr><td>TV</td><td>0.30</td><td>0.12</td><td>0.18</td></tr>
+        <tr><td>Online</td><td>0.40</td><td>0.10</td><td>0.30</td></tr>
+        <tr><td>Offline</td><td>0.28</td><td>0.14</td><td>0.15</td></tr>
+        <tr><td>PR</td><td>0.22</td><td>0.08</td><td>0.10</td></tr>
+        <tr><td>CSR</td><td>0.35</td><td>0.12</td><td>0.20</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="note">Ezek a paraméterek a szimuláció belső modelljéből származnak. Ha giga scan eredményeket illesztesz, ezek szolgálnak kiindulásként.</p>
+</div>
+
 <script>
 // === CONFIG ===
 const CHANNELS = ['tv', 'online', 'offline', 'pr', 'csr'];
 const CH_LABELS = { tv: 'TV', online: 'Online', offline: 'Offline', pr: 'PR', csr: 'CSR' };
-const CH_COLORS = { tv: '#e94560', online: '#4caf50', offline: '#2196f3', pr: '#ff9800', csr: '#9c27b0' };
+const CH_COLORS = { tv: '#2d6a4f', online: '#d4763a', offline: '#3a7bd5', pr: '#6b6b6b', csr: '#a0785a' };
 
 const PRESETS = {
   'selejtező_A': {
@@ -216,6 +290,56 @@ function marginalValue(ch, currentSpend) {
   return (getA(ch) / getK(ch)) * Math.exp(-currentSpend / getK(ch));
 }
 
+// === OPTIMIZER FOR A GIVEN BUDGET ===
+function optimizeForBudget(budget) {
+  const alloc = {};
+  CHANNELS.forEach(ch => alloc[ch] = 0);
+  if (budget <= 0) return alloc;
+
+  let lo = 0, hi = Math.max(...CHANNELS.map(ch => getA(ch) / getK(ch)));
+  for (let iter = 0; iter < 100; iter++) {
+    const lambda = (lo + hi) / 2;
+    let total = 0;
+    CHANNELS.forEach(ch => {
+      const a = getA(ch), k = getK(ch);
+      const x = -k * Math.log(lambda * k / a);
+      total += Math.max(0, Math.round(x));
+    });
+    if (total > budget) lo = lambda; else hi = lambda;
+  }
+  const lambda = (lo + hi) / 2;
+  let total = 0;
+  CHANNELS.forEach(ch => {
+    const a = getA(ch), k = getK(ch);
+    const x = -k * Math.log(lambda * k / a);
+    alloc[ch] = Math.max(0, Math.round(x));
+    total += alloc[ch];
+  });
+  while (total > budget) {
+    let worstCh = null, worstMarg = Infinity;
+    CHANNELS.forEach(ch => {
+      if (alloc[ch] > 0) {
+        const m = marginalValue(ch, alloc[ch] - 1);
+        if (m < worstMarg) { worstMarg = m; worstCh = ch; }
+      }
+    });
+    if (!worstCh) break;
+    alloc[worstCh]--;
+    total--;
+  }
+  while (total < budget) {
+    let bestCh = null, bestMarg = -1;
+    CHANNELS.forEach(ch => {
+      const m = marginalValue(ch, alloc[ch]);
+      if (m > bestMarg) { bestMarg = m; bestCh = ch; }
+    });
+    if (!bestCh) break;
+    alloc[bestCh]++;
+    total++;
+  }
+  return alloc;
+}
+
 // === PRESETS ===
 function loadPreset(key) {
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('preset-active'));
@@ -248,54 +372,7 @@ function toggleParams() {
 // === OPTIMIZER ===
 function runOptimizer() {
   const budget = getBudget();
-  // Greedy with step=1 for exact optimum
-  const alloc = {};
-  CHANNELS.forEach(ch => alloc[ch] = 0);
-  // Analytical optimizer: at optimum, marginal values are equal across active channels
-  // marginal(ch) = a/K * exp(-x/K) = λ  →  x = -K * ln(λ*K/a)
-  // Find λ such that Σ x_i = budget (binary search)
-  let lo = 0, hi = Math.max(...CHANNELS.map(ch => getA(ch) / getK(ch)));
-  for (let iter = 0; iter < 100; iter++) {
-    const lambda = (lo + hi) / 2;
-    let total = 0;
-    CHANNELS.forEach(ch => {
-      const a = getA(ch), k = getK(ch);
-      const x = -k * Math.log(lambda * k / a);
-      total += Math.max(0, Math.round(x));
-    });
-    if (total > budget) lo = lambda; else hi = lambda;
-  }
-  const lambda = (lo + hi) / 2;
-  let total = 0;
-  CHANNELS.forEach(ch => {
-    const a = getA(ch), k = getK(ch);
-    const x = -k * Math.log(lambda * k / a);
-    alloc[ch] = Math.max(0, Math.round(x));
-    total += alloc[ch];
-  });
-  // Adjust rounding error: add/remove 1 from best marginal channel
-  while (total > budget) {
-    let worstCh = null, worstMarg = Infinity;
-    CHANNELS.forEach(ch => {
-      if (alloc[ch] > 0) {
-        const m = marginalValue(ch, alloc[ch] - 1);
-        if (m < worstMarg) { worstMarg = m; worstCh = ch; }
-      }
-    });
-    if (!worstCh) break;
-    alloc[worstCh]--;
-    total--;
-  }
-  while (total < budget) {
-    let bestCh = null, bestMarg = -1;
-    CHANNELS.forEach(ch => {
-      const m = marginalValue(ch, alloc[ch]);
-      if (m > bestMarg) { bestMarg = m; bestCh = ch; }
-    });
-    if (!bestCh) break;
-    alloc[bestCh]++;
-    total++;
-  }
+  const alloc = optimizeForBudget(budget);
 
   optimalAlloc = { ...alloc };
   optimalBrand = brandPercent(alloc);
@@ -323,11 +400,65 @@ function runOptimizer() {
   updateDoughnutChart(alloc, budget);
 }
 
+// === TARGET BRAND % ===
+function findBudgetForTarget(targetPct) {
+  const base = getBase();
+  const maxBrand = base;
+  let maxPossible = base;
+  CHANNELS.forEach(ch => { maxPossible += getA(ch); });
+
+  if (targetPct >= maxPossible) {
+    return { budget: null, allocation: null, message: 'A cél (' + targetPct.toFixed(1) + '%) meghaladja a modell maximumát (' + maxPossible.toFixed(1) + '%)' };
+  }
+  if (targetPct <= base) {
+    return { budget: 0, allocation: optimizeForBudget(0), message: null };
+  }
+
+  let lo = 0, hi = 5000000;
+  for (let iter = 0; iter < 60; iter++) {
+    const mid = (lo + hi) / 2;
+    const alloc = optimizeForBudget(mid);
+    const brand = brandPercent(alloc);
+    if (brand < targetPct) lo = mid; else hi = mid;
+  }
+  const finalBudget = Math.ceil(hi / 1000) * 1000;
+  const allocation = optimizeForBudget(finalBudget);
+  return { budget: finalBudget, allocation, message: null };
+}
+
+function onTargetChange() {
+  const target = parseFloat(document.getElementById('targetSlider').value);
+  document.getElementById('targetVal').textContent = target.toFixed(1) + '%';
+
+  const result = findBudgetForTarget(target);
+  const container = document.getElementById('targetResult');
+
+  if (result.message) {
+    container.innerHTML = `<div class="target-line" style="color:#d4763a;">${result.message}</div>`;
+    return;
+  }
+  if (result.budget === 0) {
+    container.innerHTML = `<div class="target-line">Cél: <strong>${target.toFixed(1)}%</strong> — Az alap márka% már eléri ezt a szintet, nincs szükség marketing büdzsére.</div>`;
+    return;
+  }
+
+  const allocItems = CHANNELS.filter(ch => result.allocation[ch] > 0).map(ch =>
+    `<div class="target-alloc-item"><span class="ch-label">${CH_LABELS[ch]}</span> <span class="ch-val" style="color:${CH_COLORS[ch]}">${Math.round(result.allocation[ch] / 1000)}k</span></div>`
+  ).join('');
+
+  const actualBrand = brandPercent(result.allocation);
+
+  container.innerHTML = `
+    <div class="target-line">Cél: <strong>${target.toFixed(1)}%</strong> &rarr; Szükséges büdzsé: <strong>${result.budget.toLocaleString('hu')} Ft</strong> &rarr; Elérhető: <strong>${actualBrand.toFixed(1)}%</strong></div>
+    <div class="target-alloc">${allocItems}</div>
+  `;
+}
+
 // === SLIDERS ===
 function buildSliders() {
   document.getElementById('sliders').innerHTML = CHANNELS.map(ch =>
     `<div class="slider-group">
-      <label><span style="color:${CH_COLORS[ch]}">${CH_LABELS[ch]}</span><span class="val" id="sliderVal_${ch}">0</span></label>
+      <label><span style="color:${CH_COLORS[ch]};font-weight:500;">${CH_LABELS[ch]}</span><span class="val" id="sliderVal_${ch}">0</span></label>
       <input type="range" id="slider_${ch}" min="0" max="1000000" step="1000" value="0" oninput="updateManual()">
     </div>`
   ).join('');
@@ -349,7 +480,7 @@ function updateManual() {
   const delta = bp - optimalBrand;
   const deltaEl = document.getElementById('manualDelta');
   deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%';
-  deltaEl.style.color = delta >= -0.01 ? '#4caf50' : '#e94560';
+  deltaEl.style.color = delta >= -0.01 ? '#2d6a4f' : '#d4763a';
 }
 
 function resetToOptimal() {
@@ -375,8 +506,10 @@ let effChartInstance = null;
 let doughnutInstance = null;
 let satChartInstance = null;
 
+const chartTextColor = '#6b6b6b';
+const chartGridColor = '#e5e2dc';
+
 function updateEfficiencyChart() {
-  // Bar chart: brand% gain from 100k in each channel
   const data = CHANNELS.map(ch => getA(ch) * (1 - Math.exp(-100000 / getK(ch))));
   const colors = CHANNELS.map(ch => CH_COLORS[ch]);
 
@@ -394,8 +527,8 @@ function updateEfficiencyChart() {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '+' + ctx.parsed.y.toFixed(2) + '%' } } },
         scales: {
-          y: { beginAtZero: true, ticks: { color: '#aaa', callback: v => '+' + v.toFixed(1) + '%' }, grid: { color: '#333' } },
-          x: { ticks: { color: '#aaa' }, grid: { display: false } }
+          y: { beginAtZero: true, ticks: { color: chartTextColor, callback: v => '+' + v.toFixed(1) + '%' }, grid: { color: chartGridColor } },
+          x: { ticks: { color: chartTextColor }, grid: { display: false } }
         }
       }
     });
@@ -414,11 +547,11 @@ function updateDoughnutChart(alloc, budget) {
   } else {
     doughnutInstance = new Chart(document.getElementById('doughnutChart'), {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff' }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#ccc', padding: 12 } },
+          legend: { position: 'bottom', labels: { color: chartTextColor, padding: 12, font: { family: "'DM Sans', sans-serif" } } },
           tooltip: { callbacks: { label: ctx => { const pct = budget > 0 ? (ctx.parsed / budget * 100).toFixed(1) : 0; return ctx.label + ': ' + pct + '%'; } } }
         }
       }
@@ -450,10 +583,10 @@ function updateSaturationChart() {
       data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { color: '#ccc', padding: 10, usePointStyle: true } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': +' + ctx.parsed.y.toFixed(2) + '%' } } },
+        plugins: { legend: { position: 'bottom', labels: { color: chartTextColor, padding: 10, usePointStyle: true, font: { family: "'DM Sans', sans-serif" } } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': +' + ctx.parsed.y.toFixed(2) + '%' } } },
         scales: {
-          y: { beginAtZero: true, ticks: { color: '#aaa', callback: v => '+' + v + '%' }, grid: { color: '#333' }, title: { display: true, text: 'Márka% hozzájárulás', color: '#aaa' } },
-          x: { ticks: { color: '#aaa', maxTicksLimit: 12 }, grid: { color: '#222' }, title: { display: true, text: 'Költés', color: '#aaa' } }
+          y: { beginAtZero: true, ticks: { color: chartTextColor, callback: v => '+' + v + '%' }, grid: { color: chartGridColor }, title: { display: true, text: 'Márka% hozzájárulás', color: chartTextColor, font: { family: "'DM Sans', sans-serif" } } },
+          x: { ticks: { color: chartTextColor, maxTicksLimit: 12 }, grid: { color: '#f0ede8' }, title: { display: true, text: 'Költés', color: chartTextColor, font: { family: "'DM Sans', sans-serif" } } }
         }
       }
     });
@@ -494,6 +627,7 @@ function onParamChange() {
   updateEfficiencyChart();
   updateSaturationChart();
   updateSummaryTable();
+  onTargetChange();
 }
 
 // === INIT ===
