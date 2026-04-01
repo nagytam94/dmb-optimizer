@@ -630,6 +630,89 @@ tbody td {
 .kpi-card .kpi-trend.pos { color: var(--accent-green); }
 .kpi-card .kpi-trend.neg { color: var(--accent-red); }
 
+/* ── KPI Tier System ── */
+.kpi-tier {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.kpi-tier-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.kpi-tier-header:hover { background: var(--surface); }
+.kpi-tier-header h4 {
+  margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 700; color: var(--text-secondary);
+}
+.kpi-tier-header .chevron {
+  transition: transform 0.2s; font-size: 14px; color: var(--text-muted);
+}
+.kpi-tier-header .chevron.closed { transform: rotate(-90deg); }
+.kpi-tier-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 8px; padding: 12px;
+}
+.kpi-card-v2 {
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--bg-secondary); border-radius: var(--radius-sm);
+  padding: 10px 12px; border-left: 3px solid var(--text-muted);
+  cursor: pointer; transition: box-shadow 0.2s, transform 0.15s;
+  position: relative;
+}
+.kpi-card-v2:hover {
+  box-shadow: var(--shadow-md); transform: translateY(-1px);
+}
+.kpi-card-v2 .kpi-label {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); font-weight: 600; line-height: 1.2;
+}
+.kpi-card-v2 .kpi-main {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.kpi-card-v2 .kpi-value {
+  font-family: 'JetBrains Mono', monospace; font-size: 17px;
+  font-weight: 700; color: var(--text-primary); line-height: 1.1;
+}
+.kpi-card-v2 .kpi-unit {
+  font-size: 11px; color: var(--text-muted); font-weight: 500;
+}
+.kpi-card-v2 .kpi-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  color: var(--text-secondary); line-height: 1.3;
+}
+.kpi-card-v2 .kpi-trend-v2 {
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  font-weight: 600; white-space: nowrap;
+}
+.kpi-card-v2 .kpi-rank {
+  position: absolute; top: 6px; right: 8px;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  border-radius: 4px; background: var(--surface); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.kpi-card-v2 .kpi-rank.gold { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.kpi-card-v2 .kpi-rank.silver { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.kpi-card-v2 .kpi-rank.bronze { background: #fed7aa; color: #9a3412; border-color: #fdba74; }
+.kpi-stacked-bar {
+  display: flex; height: 6px; border-radius: 3px; overflow: hidden;
+  background: var(--bg-secondary); margin-left: auto; width: 180px;
+}
+.kpi-stacked-bar div { height: 100%; transition: width 0.3s; }
+@keyframes penaltyPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(220,38,38,0.1); }
+}
+.kpi-card-v2.penalty-active {
+  animation: penaltyPulse 2s ease-in-out infinite;
+  border-left-color: #dc2626;
+}
+
 /* ── Period Selector ── */
 
 .period-selector {
@@ -867,16 +950,22 @@ tbody td {
 
     <!-- TAB 1: Összefoglaló -->
     <div class="tab-panel active" id="tab-overview">
+      <!-- KPI Tier System -->
+      <div id="kpiTierSystem"></div>
+      <!-- Trend chart area -->
+      <div id="kpiTrendArea" style="margin:0 0 12px;display:none;background:var(--surface);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span id="kpiTrendTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);"></span>
+          <span onclick="document.getElementById('kpiTrendArea').style.display='none'" style="cursor:pointer;color:var(--text-muted);font-size:18px;">&times;</span>
+        </div>
+        <div style="height:140px;position:relative;"><canvas id="kpiTrendChart"></canvas></div>
+      </div>
       <div class="grid">
         <div class="panel" id="panelRV">
           <h3><i data-lucide="trending-up"></i> Részvényárfolyam Scoreboard</h3>
           <div id="rvContent"></div>
         </div>
-        <div class="panel" id="panelDecision">
-          <h3><i data-lucide="gauge"></i> KPI Mutatók</h3>
-          <div id="decisionContent"></div>
-        </div>
-        <div class="panel panel-full" id="panelProfit">
+        <div class="panel" id="panelProfit">
           <h3><i data-lucide="bar-chart"></i> Profit Waterfall</h3>
           <div style="height:200px;position:relative;">
             <canvas id="waterfallChart"></canvas>
@@ -1389,7 +1478,7 @@ function renderAll() {
   renderHitelPortfolio(rows);
   renderHitelBetetArany(rows);
   renderBetetForras(rows);
-  renderDecisionAnalysis(rows);
+  renderKPISystem(rows);
   renderEllenfelElemzes(rows);
   renderViselkedes(rows);
   renderForecast();
@@ -2099,131 +2188,387 @@ function renderBetetForras(rows) {
   });
 }
 
-// ===== PANEL 5: KPI MUTATÓK =====
-function renderDecisionAnalysis(rows) {
-  // Extract KPI data for JTR
+// ===== KPI TIER SYSTEM =====
+function renderKPISystem(rows) {
   const summaryStart = findSection(rows, 'Összefoglaló');
   const elemStart = findRowContains(rows, 'Elemzés', summaryStart > -1 ? summaryStart : 0);
 
-  // RV: skip the header row (first "Részvényárfolyam" has no value), find the second one with actual values
+  // --- Extract ALL data ---
   let rRV = findRowContains(rows, 'Részvényárfolyam', summaryStart > -1 ? summaryStart : 0);
   if (rRV > -1 && (jtrVal(rows, rRV) === 0 || jtrVal(rows, rRV) === null || jtrVal(rows, rRV) === '')) {
     rRV = findRowContains(rows, 'Részvényárfolyam', rRV + 1);
   }
+  const rROA = findRowContains(rows, 'ROA', summaryStart > -1 ? summaryStart : 0);
+  const rEredm = findRowContains(rows, 'Eredménytartalék', summaryStart > -1 ? summaryStart : 0);
+  const rBunteto = findRowContains(rows, 'Büntet', summaryStart > -1 ? summaryStart : 0);
   const rAdozas = findRowContains(rows, 'Adózás utáni eredmény', elemStart > -1 ? elemStart : 0);
   const rTeljHitel = findRowContains(rows, 'Teljes hitelállomány', elemStart > -1 ? elemStart : 0);
   const rTeljBetet = findRowContains(rows, 'Teljes betétállomány', elemStart > -1 ? elemStart : 0);
   const rNKB = findRowContains(rows, 'Nettó kamatbevétel', elemStart > -1 ? elemStart : 0);
   const rOsszEsz = findRowContains(rows, 'Összes eszköz', elemStart > -1 ? elemStart : 0);
 
+  // JTR values (ti=0)
   const rv = rRV > -1 ? jtrVal(rows, rRV) : 0;
+  const roaPont = rROA > -1 ? jtrVal(rows, rROA) : 0;
   const profit = rAdozas > -1 ? jtrVal(rows, rAdozas) : 0;
   const hitelAll = rTeljHitel > -1 ? jtrVal(rows, rTeljHitel) : 0;
   const betetAll = rTeljBetet > -1 ? jtrVal(rows, rTeljBetet) : 0;
   const nkb = rNKB > -1 ? jtrVal(rows, rNKB) : 0;
   const osszEsz = rOsszEsz > -1 ? jtrVal(rows, rOsszEsz) : 1;
+  const eredmComp = rEredm > -1 ? jtrVal(rows, rEredm) : 0;
+  const bunteto = rBunteto > -1 ? jtrVal(rows, rBunteto) : 0;
+  const eredmtartReal = eredmComp * 250000;
+  const hitelPont = hitelAll / 1500000;
+  const profitPont = profit / 33333;
+  const etPont = eredmtartReal / 250000;
 
-  // NIM% = Nettó kamatbevétel / Összes eszköz * 100
-  const nimPct = osszEsz > 0 ? (nkb / osszEsz * 100) : 0;
-  // H/B arány = Hitelállomány / Betétállomány * 100
-  const hbRatio = betetAll > 0 ? (hitelAll / betetAll * 100) : 0;
+  // All teams data for ranking
+  const teamVals = TEAMS.map((name, ti) => ({
+    name,
+    rv: rRV > -1 ? val(rows, rRV, ti) : 0,
+    roa: rROA > -1 ? val(rows, rROA, ti) : 0,
+    hitelPont: rTeljHitel > -1 ? val(rows, rTeljHitel, ti) / 1500000 : 0,
+    profitPont: rAdozas > -1 ? val(rows, rAdozas, ti) / 33333 : 0,
+    etPont: rEredm > -1 ? val(rows, rEredm, ti) * 250000 / 250000 : 0,
+    bunteto: rBunteto > -1 ? val(rows, rBunteto, ti) : 0,
+    hitel: rTeljHitel > -1 ? val(rows, rTeljHitel, ti) : 0,
+    betet: rTeljBetet > -1 ? val(rows, rTeljBetet, ti) : 0,
+    profit: rAdozas > -1 ? val(rows, rAdozas, ti) : 0,
+    nkb: rNKB > -1 ? val(rows, rNKB, ti) : 0,
+    eszkoz: rOsszEsz > -1 ? val(rows, rOsszEsz, ti) : 1,
+  }));
 
-  const kpis = [
-    { icon: 'trending-up', label: 'Részvényárfolyam', value: rv.toFixed(2), color: '#d4763a',
-      info: 'A játék fő mutatója. Képlet: 15 + ROA(10%) + Hitelállomány(45%) + Profit(20%) + Eredménytartalék(25%) - Büntetőpont. A selejtezőben az utolsó periódus (P4) végén a legmagasabb RV nyer.' },
-    { icon: 'banknote', label: 'Profit', value: fmtN(Math.round(profit)), color: profit >= 0 ? '#2d6a4f' : '#c0392b',
-      info: 'Adózás utáni eredmény. Ez a periódus nettó nyeresége kamatbevétel - kamatkiadás - működési költségek - adó után. A részvényárfolyam 20%-a közvetlenül ebből jön (Profit pont = eredmény / 10,000 × 20%).' },
-    { icon: 'landmark', label: 'Hitelállomány', value: fmt(Math.round(hitelAll)), color: '#2563eb',
-      info: 'Összes kihelyezett hitel értéke. A részvényárfolyam LEGNAGYOBB tényezője: 45%-os súly! Képlet: Hitelállomány / 600,000 × 45%. Minden +1M hitelállomány ≈ +0.75 RV pont.' },
-    { icon: 'piggy-bank', label: 'Betétállomány', value: fmt(Math.round(betetAll)), color: '#7c3aed',
-      info: 'Összes betét amit ügyfelektől gyűjtöttünk. Ez a fő FORRÁS a hitelezéshez. Ha kevesebb mint a hitelállomány → bankköziből pótoljuk (3.5-3.7% kamat). Nyerő stratégia: betétet szűkíteni, bankköziből finanszírozni.' },
-    { icon: 'percent', label: 'NIM%', value: nimPct.toFixed(2) + '%', color: '#0d9488',
-      info: 'Nettó Kamatmarzs (Net Interest Margin). Képlet: Nettó kamatbevétel / Összes eszköz × 100. Mutatja mennyire hatékonyan termeli a bank a kamatbevételt az eszközeihez képest. Magasabb = jobb. Tipikus: 4-7%.' },
-    { icon: 'scale', label: 'H/B arány', value: hbRatio.toFixed(0) + '%', color: hbRatio > 120 ? '#c0392b' : hbRatio > 100 ? '#d4763a' : '#2d6a4f',
-      info: 'Hitel/Betét arány (Loan-to-Deposit Ratio). Képlet: Hitelállomány / Betétállomány × 100. Ha >100%: több hitelt adunk ki mint amennyit betétben gyűjtünk → bankköziből finanszírozunk. 2025-ben JTR úgy nyert hogy ezt 200%+ fölé vitte (betét 15M, hitel 35M).' }
-  ];
+  // Rank function: returns rank 1-4 among teams (higher=better by default)
+  function getRank(key, lowerBetter) {
+    const sorted = [...teamVals].sort((a,b) => lowerBetter ? a[key]-b[key] : b[key]-a[key]);
+    const jtrIdx = sorted.findIndex(t => t.name === 'JTR');
+    return { pos: jtrIdx + 1, total: TEAMS.length, sorted };
+  }
+  function rankBadge(r) {
+    const pos = r.pos;
+    const cls = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+    const emo = pos === 1 ? '1.' : pos === 2 ? '2.' : pos === 3 ? '3.' : '4.';
+    return `<span class="kpi-rank ${cls}" title="JTR helyezés: ${pos}. a ${r.total} csapatból">${emo}/${r.total}</span>`;
+  }
+  // Info button helper
+  function kpiInfoBtn(label, text) {
+    const safeLabel = label.replace(/'/g, "\\'");
+    const safeText = text.replace(/'/g, "\\'");
+    return ` <span class="info-btn" onclick="event.stopPropagation();showInfo('${safeLabel}','${safeText}')">i</span>`;
+  }
 
-  // Collect historical data for trend charts
+  // --- Trend data collection ---
   const periods = Object.keys(allData).sort((a,b) => parseInt(a)-parseInt(b));
-  const trendData = {};
-  const trendKeys = ['rv','profit','hitelAll','betetAll','nim','hb'];
   const trendExtractors = {
-    rv: (rows) => { let r = findRowContains(rows, 'Részvényárfolyam', findRowContains(rows, 'Összefoglaló')); if(r>-1 && (!jtrVal(rows,r) || jtrVal(rows,r)===0)) r = findRowContains(rows, 'Részvényárfolyam', r+1); return r>-1 ? jtrVal(rows,r) : null; },
-    profit: (rows) => { const r = findRowContains(rows, 'Adózás utáni eredmény', findRowContains(rows,'Elemzés')); return r>-1 ? jtrVal(rows,r) : null; },
-    hitelAll: (rows) => { const r = findRowContains(rows, 'Teljes hitelállomány', findRowContains(rows,'Elemzés')); return r>-1 ? jtrVal(rows,r) : null; },
-    betetAll: (rows) => { const r = findRowContains(rows, 'Teljes betétállomány', findRowContains(rows,'Elemzés')); return r>-1 ? jtrVal(rows,r) : null; },
-    nim: (rows) => { const nkb = findRowContains(rows,'Nettó kamatbevétel',findRowContains(rows,'Elemzés')); const esz = findRowContains(rows,'Összes eszköz',findRowContains(rows,'Elemzés')); return nkb>-1&&esz>-1 ? (jtrVal(rows,nkb)/jtrVal(rows,esz)*100) : null; },
-    hb: (rows) => { const h = findRowContains(rows,'Teljes hitelállomány',findRowContains(rows,'Elemzés')); const b = findRowContains(rows,'Teljes betétállomány',findRowContains(rows,'Elemzés')); return h>-1&&b>-1&&jtrVal(rows,b)>0 ? (jtrVal(rows,h)/jtrVal(rows,b)*100) : null; },
+    rv: (r) => { let rr = findRowContains(r, 'Részvényárfolyam', findRowContains(r, 'Összefoglaló')); if(rr>-1 && (!jtrVal(r,rr) || jtrVal(r,rr)===0)) rr = findRowContains(r, 'Részvényárfolyam', rr+1); return rr>-1 ? jtrVal(r,rr) : null; },
+    roaPont: (r) => { const rr = findRowContains(r, 'ROA', findRowContains(r, 'Összefoglaló')); return rr>-1 ? jtrVal(r,rr) : null; },
+    hitelPont: (r) => { const rr = findRowContains(r, 'Teljes hitelállomány', findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr)/1500000 : null; },
+    profitPont: (r) => { const rr = findRowContains(r, 'Adózás utáni eredmény', findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr)/33333 : null; },
+    etPont: (r) => { const rr = findRowContains(r, 'Eredménytartalék', findRowContains(r, 'Összefoglaló')); return rr>-1 ? jtrVal(r,rr) : null; },
+    bunteto: (r) => { const rr = findRowContains(r, 'Büntet', findRowContains(r, 'Összefoglaló')); return rr>-1 ? jtrVal(r,rr) : null; },
+    nkb: (r) => { const rr = findRowContains(r,'Nettó kamatbevétel',findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr) : null; },
+    nim: (r) => { const n = findRowContains(r,'Nettó kamatbevétel',findRowContains(r,'Elemzés')); const e = findRowContains(r,'Összes eszköz',findRowContains(r,'Elemzés')); return n>-1&&e>-1&&jtrVal(r,e)>0 ? (jtrVal(r,n)/jtrVal(r,e)*100) : null; },
+    profit: (r) => { const rr = findRowContains(r, 'Adózás utáni eredmény', findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr) : null; },
+    hitelAll: (r) => { const rr = findRowContains(r, 'Teljes hitelállomány', findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr) : null; },
+    betetAll: (r) => { const rr = findRowContains(r, 'Teljes betétállomány', findRowContains(r,'Elemzés')); return rr>-1 ? jtrVal(r,rr) : null; },
+    hb: (r) => { const h = findRowContains(r,'Teljes hitelállomány',findRowContains(r,'Elemzés')); const b = findRowContains(r,'Teljes betétállomány',findRowContains(r,'Elemzés')); return h>-1&&b>-1&&jtrVal(r,b)>0 ? (jtrVal(r,h)/jtrVal(r,b)*100) : null; },
+    marketShare: (r) => {
+      const rr = findRowContains(r, 'Teljes hitelállomány', findRowContains(r,'Elemzés'));
+      if (rr < 0) return null;
+      const jtr = jtrVal(r, rr); let sum = 0;
+      for (let i = 0; i < TEAMS.length; i++) sum += val(r, rr, i);
+      return sum > 0 ? (jtr/sum*100) : null;
+    },
   };
-  trendKeys.forEach(key => { trendData[key] = []; });
+  const trendData = {};
+  Object.keys(trendExtractors).forEach(k => { trendData[k] = []; });
   periods.forEach(p => {
-    const rows = allData[p];
-    trendKeys.forEach(key => {
-      try { trendData[key].push(trendExtractors[key](rows)); } catch(e) { trendData[key].push(null); }
+    const r = allData[p];
+    Object.keys(trendExtractors).forEach(k => {
+      try { trendData[k].push(trendExtractors[k](r)); } catch(e) { trendData[k].push(null); }
     });
   });
 
-  let html = '<div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-top:4px;">';
-  kpis.forEach((k, idx) => {
-    const trendKey = trendKeys[idx];
-    html += `<div style="cursor:pointer;
-      display:flex; align-items:center; gap:14px;
-      background:var(--surface); border-radius:var(--radius-md);
-      border-left:4px solid ${k.color};
-      padding:14px 16px;
-      box-shadow:var(--shadow-sm);
-      transition:box-shadow 0.2s, transform 0.2s;
-    " onclick="showKpiTrend('${trendKey}','${k.label}','${k.color}')"
-       onmouseenter="this.style.boxShadow='var(--shadow-md)';this.style.transform='translateY(-2px)'"
-       onmouseleave="this.style.boxShadow='var(--shadow-sm)';this.style.transform='translateY(0)'">
-      <div style="
-        width:36px; height:36px; border-radius:8px;
-        background:${k.color}15; display:flex; align-items:center; justify-content:center; flex-shrink:0;
-      ">
-        <i data-lucide="${k.icon}" style="width:18px; height:18px; color:${k.color};"></i>
-      </div>
-      <div style="min-width:0;flex:1;">
-        <div style="font-size:10px; color:var(--text-muted); font-weight:500; text-transform:uppercase; letter-spacing:0.5px;">${k.label} ${k.info ? '<span class="info-btn" onclick="event.stopPropagation();showInfo(\'' + k.label.replace(/'/g,"\\'") + '\', \'' + k.info.replace(/'/g,"\\'") + '\')">i</span>' : ''}</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--text-primary); line-height:1.2; margin-top:1px;">${k.value}</div>
-      </div>`;
-    // Mini sparkline inline (text-based trend indicator)
-    const vals = trendData[trendKey].filter(v => v !== null);
-    if (vals.length >= 2) {
-      const prev = vals[vals.length-2];
-      const curr = vals[vals.length-1];
-      const diff = prev !== 0 ? ((curr-prev)/Math.abs(prev)*100) : 0;
-      const arrow = diff > 0.5 ? '↑' : diff < -0.5 ? '↓' : '→';
-      const clr = diff > 0.5 ? 'var(--accent-green)' : diff < -0.5 ? 'var(--accent-red)' : 'var(--text-muted)';
-      html += `<div style="font-size:12px;font-weight:700;color:${clr};white-space:nowrap;">${arrow} ${diff>0?'+':''}${diff.toFixed(1)}%</div>`;
+  // --- Trend helper ---
+  function trendArrow(key) {
+    const vals = (trendData[key] || []).filter(v => v !== null);
+    if (vals.length < 2) return '';
+    const prev = vals[vals.length-2], curr = vals[vals.length-1];
+    const diff = prev !== 0 ? ((curr-prev)/Math.abs(prev)*100) : 0;
+    const arrow = diff > 0.5 ? '↑' : diff < -0.5 ? '↓' : '→';
+    const clr = diff > 0.5 ? 'var(--accent-green)' : diff < -0.5 ? 'var(--accent-red)' : 'var(--text-muted)';
+    return `<span class="kpi-trend-v2" style="color:${clr};">${arrow} ${diff>0?'+':''}${diff.toFixed(1)}%</span>`;
+  }
+
+  // --- Tier 2 extra data ---
+  const nimPct = osszEsz > 0 ? (nkb / osszEsz * 100) : 0;
+  const hbRatio = betetAll > 0 ? (hitelAll / betetAll * 100) : 0;
+  // Market share
+  let totalHitel = 0; teamVals.forEach(t => totalHitel += t.hitel);
+  const marketShare = totalHitel > 0 ? (hitelAll / totalHitel * 100) : 25;
+  // OpEx from P&L
+  const penStart = findRowContains(rows, 'Pénzügyek');
+  const eredmKim = findRowContains(rows, 'Eredménykimutatás', penStart > -1 ? penStart : 0);
+  const plBase = eredmKim > -1 ? eredmKim : 0;
+  const rSzemKtg = getFieldInBlock(rows, plBase, 'Személyi jellegű', 60);
+  const rAdminKtg = getFieldInBlock(rows, plBase, 'Adminisztratív', 60);
+  const rKepzKtg = getFieldInBlock(rows, plBase, 'Képzési költség', 60);
+  const rAmort = getFieldInBlock(rows, plBase, 'Tárgyi eszközök értékcsökkenése', 60);
+  const rMarketing = getFieldInBlock(rows, plBase, 'Promóció és reklám', 60);
+  const rProjekt = getFieldInBlock(rows, plBase, 'Projektek költsége', 60);
+  const rCeltart1 = getFieldInBlock(rows, plBase, 'Kockázati céltartalék', 60);
+  const rCeltart = rCeltart1 > -1 ? getFieldInBlock(rows, rCeltart1 + 1, 'Kockázati céltartalék', 10) : -1;
+  const szemKtg = rSzemKtg > -1 ? Math.abs(penVal(rows, rSzemKtg)) : 0;
+  const adminKtg = rAdminKtg > -1 ? Math.abs(penVal(rows, rAdminKtg)) : 0;
+  const kepzKtg = rKepzKtg > -1 ? Math.abs(penVal(rows, rKepzKtg)) : 0;
+  const amort = rAmort > -1 ? Math.abs(penVal(rows, rAmort)) : 0;
+  const marketing = rMarketing > -1 ? Math.abs(penVal(rows, rMarketing)) : 0;
+  const projekt = rProjekt > -1 ? Math.abs(penVal(rows, rProjekt)) : 0;
+  const celtart = rCeltart > -1 ? Math.abs(penVal(rows, rCeltart)) : 0;
+  const opex = szemKtg + adminKtg + kepzKtg + amort + marketing + projekt;
+  // HR & IT utilization
+  const adminStart = findRowContains(rows, 'Adminisztráció');
+  const rKihaszn = adminStart > -1 ? getFieldInBlock(rows, adminStart, 'Személyi kihasználtság', 20) : -1;
+  const hrKihaszn = rKihaszn > -1 ? jtrVal(rows, rKihaszn) : null;
+  const itStart = findRowContains(rows, 'Informatika');
+  const itBase2 = itStart > -1 ? itStart : findRowContains(rows, 'IT');
+  const rITkihaszn = itBase2 > -1 ? getFieldInBlock(rows, itBase2, 'Kihasználtság', 30) : -1;
+  let itKihaszn = rITkihaszn > -1 ? jtrVal(rows, rITkihaszn) : null;
+  // Fallback: try to compute from scan IT data if Excel section missing
+  if (itKihaszn === null && megaScanData?.it) {
+    const itKap = megaScanData.it.kapacitas;
+    const itAll = megaScanData.it.startAllomany;
+    if (itKap && itAll) {
+      const mp = megaScanData.meta?.period?.current || 1;
+      const capIdx = Math.min(mp, itKap.length - 1);
+      // IT kihasználtság ≈ kapacitás / eszközállomány (egyszerű proxy)
+      // De a pontos számoláshoz az Excel kell
     }
-    html += `</div>`;
+  }
+  // Márka%
+  let marka = null;
+  if (megaScanData && megaScanData.marketing) {
+    // Try to get brand from scan's marketing data — weighted preference M across loan products
+    const loans = megaScanData.market?.loans || {};
+    let mSum = 0, wSum = 0;
+    for (const [k, v] of Object.entries(loans)) {
+      const mPref = v.pref?.M || v.pref?.Márka || 0;
+      const dem = Array.isArray(v.demand || v.kereslet) ? (v.demand || v.kereslet)[0] || 1 : 1;
+      mSum += mPref * dem; wSum += dem;
+    }
+    if (wSum > 0) marka = mSum / wSum; // Average M preference weight
+  }
+
+  // --- Tier 3 extra data ---
+  const sajatToke = 5000000 + (eredmComp * 200000) + profit;
+  const tokemegfeleles = osszEsz > 0 ? (sajatToke / osszEsz * 100) : 100;
+  const szabadToke = sajatToke - osszEsz * 0.08;
+  // Loan quality (weighted avg default rate from scan)
+  let loanQuality = null;
+  if (megaScanData) {
+    const hitData = megaScanData.hitelek || megaScanData.market?.loans || {};
+    let qSum = 0, qW = 0;
+    for (const [k, v] of Object.entries(hitData)) {
+      const behajt = Array.isArray(v.behajthatatlan) ? v.behajthatatlan[v.behajthatatlan.length-1] : null;
+      if (behajt !== null) {
+        // weight by JTR loan allocation if available
+        qSum += behajt * 100; qW += 1;
+      }
+    }
+    if (qW > 0) loanQuality = qSum / qW;
+  }
+  // Deposit cost vs bankközi
+  let betetVsBK = null;
+  const bkRate = megaScanData?.rates?.bankkoziHitel;
+  if (bkRate && betetAll > 0) {
+    // Simple: betét kamatkiadás / betétállomány vs bankközi hitel rate
+    const rKamatRaf = getFieldInBlock(rows, plBase, 'Kamat ráfordítások', 40);
+    const kamatRaf = rKamatRaf > -1 ? Math.abs(penVal(rows, rKamatRaf)) : 0;
+    const betetKamatPct = betetAll > 0 ? (kamatRaf / osszEsz * 100) : 0;
+    const currentBK = Array.isArray(bkRate) ? bkRate[bkRate.length-1] : bkRate;
+    betetVsBK = { betetPct: betetKamatPct, bkPct: currentBK };
+  }
+  // Decision divergence
+  let dontesiElter = null;
+  if (megaScanData?.dontesek || megaScanData?.decisions) {
+    const dec = megaScanData.dontesek || megaScanData.decisions;
+    const jtrDec = dec.JTR;
+    const lastP = jtrDec ? Object.keys(jtrDec).filter(k => !k.includes('terv')).pop() : null;
+    if (lastP && jtrDec[lastP]?.L) {
+      const jtrRates = Object.values(jtrDec[lastP].L).map(v => Array.isArray(v) ? v[0] : v);
+      const othersRates = TEAMS.filter(t => t !== 'JTR').map(t => {
+        const td = dec[t] || dec[t.replace('é','e').replace('ő','o')];
+        if (!td) return null;
+        const tp = Object.keys(td).filter(k => !k.includes('terv')).pop();
+        if (!tp || !td[tp]?.L) return null;
+        return Object.values(td[tp].L).map(v => Array.isArray(v) ? v[0] : v);
+      }).filter(Boolean);
+      if (othersRates.length > 0) {
+        let totalDiff = 0, count = 0;
+        for (let i = 0; i < jtrRates.length; i++) {
+          const avgOther = othersRates.reduce((s,r) => s + (r[i]||0), 0) / othersRates.length;
+          totalDiff += Math.abs(jtrRates[i] - avgOther);
+          count++;
+        }
+        dontesiElter = count > 0 ? (totalDiff / count).toFixed(2) : null;
+      }
+    }
+  }
+  // Active projects
+  let aktivProjektek = null;
+  if (megaScanData?.dontesek?.JTR || megaScanData?.decisions?.JTR) {
+    const jtrDec = megaScanData.dontesek?.JTR || megaScanData.decisions?.JTR;
+    const allProjects = new Set();
+    for (const [pk, pv] of Object.entries(jtrDec)) {
+      if (pv.P && Array.isArray(pv.P)) pv.P.forEach(p => allProjects.add(p));
+    }
+    aktivProjektek = allProjects.size;
+  }
+  // Demand capture
+  let keresletKihaszn = null;
+  if (megaScanData && hitelAll > 0) {
+    const hitData = megaScanData.hitelek || {};
+    const mp = megaScanData.meta?.period?.current || 1;
+    let totalDemand = 0;
+    for (const [k, v] of Object.entries(hitData)) {
+      if (Array.isArray(v.kereslet)) {
+        const idx = Math.min(mp, v.kereslet.length - 1);
+        totalDemand += v.kereslet[idx];
+      }
+    }
+    if (totalDemand > 0) keresletKihaszn = (hitelAll / totalDemand * 100);
+  }
+
+  // === BUILD HTML ===
+  let html = '';
+
+  // --- TIER 1: RV COMPONENTS ---
+  const rvTotal = rv || (15 + roaPont + hitelPont + profitPont + etPont - bunteto);
+  const rvComponents = [
+    { key: 'rv', label: 'RV ÖSSZESEN', value: rvTotal.toFixed(2), sub: null, color: '#d4763a', rank: getRank('rv'),
+      info: 'Részvényárfolyam — a játék FŐ mutatója. Képlet: 15 (bázis) + ROA pont + Hitel pont + Profit pont + ET pont − Büntető. A selejtezőben P4 végén a legmagasabb RV nyer.' },
+    { key: 'roaPont', label: 'ROA PONT', value: roaPont.toFixed(2), sub: `${(roaPont/rvTotal*100).toFixed(0)}% az RV-ből`, color: '#8b5cf6', rank: getRank('roa'),
+      info: 'Return on Assets pont. Az Excel Összefoglaló sorából jön közvetlenül — piactól függő belső szorzóval számolják. Nem mi kalkuláljuk, hanem a szimuláció. Súly: 10%.' },
+    { key: 'hitelPont', label: 'HITEL PONT', value: hitelPont.toFixed(2), sub: `${fmtN(Math.round(hitelAll))} / 1.5M`, color: '#2563eb', rank: getRank('hitelPont'),
+      info: 'Hitelállomány pont = Teljes hitelállomány / 1 500 000. Ez a LEGNAGYOBB RV komponens (súly: 40%)! Minden +1.5M hitel = +1 pont. Növelés: alacsonyabb kamat, magasabb promó, több terméktípus.' },
+    { key: 'profitPont', label: 'PROFIT PONT', value: profitPont.toFixed(2), sub: `${fmtN(Math.round(profit))} / 33.3k`, color: profit >= 0 ? '#2d6a4f' : '#c0392b', rank: getRank('profitPont'),
+      info: 'Profit pont = Adózás utáni eredmény / 33 333. Súly: 30%. Profit = Kamatbevétel − Kamatkiadás − HR − Marketing − Céltartalék − Adó. Negatív profit negatív pontot ad!' },
+    { key: 'etPont', label: 'ET PONT', value: etPont.toFixed(2), sub: `ET: ${fmtN(Math.round(eredmtartReal))}`, color: '#0d9488', rank: null,
+      info: 'Eredménytartalék pont = ET / 250 000. Súly: 20%. Az ET a korábbi periódusok halmozott nyeresége — MINDEN csapatnál azonos érték (közös piaci mutató), tehát nincs kompetitív előny benne.' },
+    { key: 'bunteto', label: 'BÜNTETŐ', value: bunteto.toFixed(2), sub: bunteto > 0 ? 'AKTÍV!' : 'nincs', color: bunteto > 0 ? '#dc2626' : '#6b7280', rank: null, penalty: bunteto > 0,
+      info: 'Büntetőpont = max(0, 8% − Tőkemegfelelési mutató) × 5. Ha a saját tőke / összes eszköz < 8%, büntetőpontot kapsz. Pl. 6%-nál: (8−6)×5 = 10 pont levonás! Kerüld el: ne vegyél fel túl sok hitelt a tőkéhez képest.' },
+  ];
+
+  // Stacked bar for RV composition
+  const comps = [roaPont, hitelPont, profitPont, etPont].map(v => Math.max(0, v));
+  const compSum = comps.reduce((s,v) => s+v, 0) || 1;
+  const compColors = ['#8b5cf6','#2563eb','#2d6a4f','#0d9488'];
+  let stackedBar = '<div class="kpi-stacked-bar">';
+  comps.forEach((v,i) => { stackedBar += `<div style="width:${(v/compSum*100).toFixed(1)}%;background:${compColors[i]};" title="${['ROA','Hitel','Profit','ET'][i]}: ${v.toFixed(2)} pont"></div>`; });
+  stackedBar += '</div>';
+
+  html += '<div class="kpi-tier">';
+  html += `<div class="kpi-tier-header" onclick="toggleKpiTier(1)"><span class="chevron" id="kpiChevron1">▼</span><h4>RV Komponensek</h4>${stackedBar}</div>`;
+  html += '<div class="kpi-tier-grid" id="kpiTier1Body">';
+  rvComponents.forEach(c => {
+    html += `<div class="kpi-card-v2 ${c.penalty ? 'penalty-active' : ''}" style="border-left-color:${c.color};" onclick="showKpiTrend('${c.key}','${c.label}','${c.color}')">`;
+    if (c.rank) html += rankBadge(c.rank);
+    html += `<div class="kpi-label">${c.label}${c.info ? kpiInfoBtn(c.label, c.info) : ''}</div>`;
+    html += `<div class="kpi-main"><span class="kpi-value" style="color:${c.color};">${c.value}</span><span class="kpi-unit">pont</span></div>`;
+    if (c.sub) html += `<div class="kpi-sub">${c.sub}</div>`;
+    html += trendArrow(c.key);
+    html += '</div>';
   });
-  html += '</div>';
+  html += '</div></div>';
 
-  // Trend chart area (hidden until clicked)
-  html += '<div id="kpiTrendArea" style="margin-top:12px;display:none;background:var(--surface);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-  html += '<span id="kpiTrendTitle" style="font-size:14px;font-weight:700;color:var(--text-primary);"></span>';
-  html += '<span onclick="document.getElementById(\'kpiTrendArea\').style.display=\'none\'" style="cursor:pointer;color:var(--text-muted);font-size:18px;">&times;</span>';
-  html += '</div>';
-  html += '<div style="height:140px;position:relative;"><canvas id="kpiTrendChart"></canvas></div>';
-  html += '</div>';
+  // --- TIER 2: KEY DRIVERS ---
+  const drivers = [
+    { key: 'nkb', label: 'NETTÓ KAMATBEV.', value: fmtN(Math.round(nkb)), color: '#2563eb',
+      info: 'Nettó kamatbevétel = Kamatbevételek − Kamat ráfordítások. A bank fő bevételi forrása. Magasabb hitelkamat és alacsonyabb betétkamat növeli. A Profit pont legfontosabb összetevője.' },
+    { key: 'nim', label: 'NIM%', value: nimPct.toFixed(2) + '%', color: '#0d9488', sub: 'NKB / Eszközök',
+      info: 'Nettó Kamatmarzs = Nettó kamatbevétel / Összes eszköz × 100. Megmutatja mennyire hatékonyan termeli a kamatbevételt. Tipikus: 4-7%. Ha csökken: a hitelkamatok túl alacsonyak vagy a betétkamatok túl magasak.' },
+    { key: 'opex', label: 'MŰKÖDÉSI KTG', value: fmtN(Math.round(opex)), color: '#dc2626', sub: `HR ${fmtN(szemKtg+adminKtg+kepzKtg)} + Mkt ${fmtN(marketing)}`,
+      info: 'Összes működési költség = Személyi ktg + Admin + Képzés + Marketing + Projektek + Értékcsökkenés. Közvetlenül csökkenti a profitot. HR: bér×létszám. Marketing: promóció+reklám. Projekt: indítás+fenntartás.' },
+    { key: 'celtart', label: 'CÉLTARTALÉK', value: fmtN(Math.round(celtart)), color: celtart > 150000 ? '#dc2626' : celtart > 50000 ? '#d97706' : '#2d6a4f',
+      info: 'Kockázati céltartalék = behajthatatlan hitelek utáni veszteség. Magasabb hitelállomány + magasabb behajthatatlan ráta = több céltartalék. Folyószámlahitel: ~11% default! Jelzálog: ~3.5%.' },
+    { key: 'marketShare', label: 'PIACI RÉSZ.', value: marketShare.toFixed(1) + '%', color: marketShare > 28 ? '#2d6a4f' : marketShare > 23 ? '#d97706' : '#dc2626', sub: `${TEAMS.length} csapatból`,
+      info: 'JTR hitelállomány / összes csapat hitelállomány × 100. 4 csapatnál 25% a "fair share". Magasabb = agresszívabb hitelezés. A Hitel pont (40% súly!) közvetlenül ebből jön.' },
+    { key: 'marka', label: 'MÁRKA PREF.', value: marka !== null ? marka.toFixed(1) + '%' : 'N/A', color: '#7c3aed', sub: 'Súlyozott M preferencia',
+      info: 'A vásárlói preferenciák "Márka" (M) súlya, kereslettel súlyozva. Ez mutatja mennyire fontos a márka a piacon. Magasabb márka%=több marketing kell. A marketing oldalon a tényleges JTR márka% látható.' },
+    { key: 'hrKih', label: 'HR KIHASZN.', value: hrKihaszn !== null ? hrKihaszn.toFixed(1) + '%' : 'N/A', color: hrKihaszn > 95 ? '#dc2626' : hrKihaszn > 80 ? '#2d6a4f' : '#d97706', sub: hrKihaszn > 100 ? 'TÚLÓRA!' : hrKihaszn < 70 ? 'Alulhasznált' : 'Optimális',
+      info: 'Személyi kihasználtság% = szükséges kapacitás / átlag létszám × 100. Képlet: (244.5 + 6100/(képzés+24.3)) / ((nyitó+záró)/2) × 100. >100%: túlóra (3.5× költség!). <70%: felesleges ember. Optimális: 85-95%.' },
+    { key: 'itKih', label: 'IT KIHASZN.', value: itKihaszn !== null ? itKihaszn.toFixed(1) + '%' : 'N/A', color: itKihaszn !== null ? (itKihaszn > 95 ? '#dc2626' : itKihaszn > 70 ? '#2d6a4f' : '#d97706') : '#6b7280', sub: itKihaszn !== null ? (itKihaszn > 100 ? 'TÚLTERHELÉS!' : '') : 'Excel Informatika szekció kell',
+      info: 'IT kihasználtság% = tényleges IT terhelés / IT eszközállomány × 100. >100%: büntetés (30% extra költség)! Az IT fejlesztés projekt (+23% kapacitás) segíthet. Az Excel Informatika szekciójából olvasható.' },
+  ];
 
-  document.getElementById('decisionContent').innerHTML = html;
+  html += '<div class="kpi-tier">';
+  html += '<div class="kpi-tier-header" onclick="toggleKpiTier(2)"><span class="chevron" id="kpiChevron2">▼</span><h4>Hajtóerők</h4></div>';
+  html += '<div class="kpi-tier-grid" id="kpiTier2Body">';
+  drivers.forEach(d => {
+    html += `<div class="kpi-card-v2" style="border-left-color:${d.color};" onclick="showKpiTrend('${d.key}','${d.label}','${d.color}')">`;
+    html += `<div class="kpi-label">${d.label}${d.info ? kpiInfoBtn(d.label, d.info) : ''}</div>`;
+    html += `<div class="kpi-main"><span class="kpi-value">${d.value}</span></div>`;
+    if (d.sub) html += `<div class="kpi-sub">${d.sub}</div>`;
+    html += trendArrow(d.key);
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // --- TIER 3: STRATEGIC ---
+  const strategic = [
+    { key: 'tokemegf', label: 'TŐKEMEGFELELÉS', value: tokemegfeleles.toFixed(1) + '%', color: tokemegfeleles < 8 ? '#dc2626' : tokemegfeleles < 12 ? '#d97706' : '#2d6a4f', sub: tokemegfeleles < 8 ? 'BÜNTETŐ ZÓNA!' : tokemegfeleles < 10 ? 'Veszélyes' : 'Biztonságos', penalty: tokemegfeleles < 8,
+      info: 'Tőkemegfelelési mutató = Saját tőke / Összes eszköz × 100. Saját tőke ≈ 5M (jegyzett) + ET + profit. Ha <8%: BÜNTETŐ = (8% − mutató) × 5! Pl. 6%-nál 10 pont levonás. Növekvő hitelállomány csökkenti.' },
+    { key: 'szabadToke', label: 'SZABAD TŐKE', value: fmtN(Math.round(szabadToke)), color: szabadToke > 2000000 ? '#2d6a4f' : szabadToke > 500000 ? '#d97706' : '#dc2626', sub: '8% fölötti rész',
+      info: 'Szabad tőke = Saját tőke − (Összes eszköz × 8%). Ez a "biztonsági tartalék" a büntető felett. Ha 0 alá megy: büntetőpont! Minél magasabb, annál agresszívebben hitelezhetsz.' },
+    { key: 'hitelMinoseg', label: 'HITELMINŐSÉG', value: loanQuality !== null ? loanQuality.toFixed(2) + '%' : 'N/A', color: loanQuality !== null && loanQuality > 5 ? '#dc2626' : '#2d6a4f', sub: 'Átl. behajthatatlan ráta',
+      info: 'Átlagos behajthatatlan ráta a hitelportfólióban. Scan adatból: Folyószámla ~11%, Személyi ~5%, Jelzálog ~3.5%, Állami ~4%, Vállalati ~5%. Magasabb = több céltartalék = kevesebb profit.' },
+    { key: 'betetVsBK', label: 'BETÉT vs BANKKÖZI', value: betetVsBK ? (betetVsBK.betetPct < betetVsBK.bkPct ? 'Betét olcsóbb' : 'Bankközi olcsóbb') : 'N/A', color: betetVsBK && betetVsBK.betetPct < betetVsBK.bkPct ? '#2d6a4f' : '#d97706', sub: betetVsBK ? `Betét: ${betetVsBK.betetPct.toFixed(2)}% | BK: ${betetVsBK.bkPct.toFixed(1)}%` : '',
+      info: 'Összehasonlítja a betétgyűjtés költségét a bankközi hitelfelvétel kamatával. Ha bankközi olcsóbb: érdemes betéteket csökkenteni és bankköziből finanszírozni (2025-ös győztes stratégia!).' },
+    { key: 'dontesElter', label: 'DÖNTÉSI ELTÉRÉS', value: dontesiElter !== null ? dontesiElter + ' pp' : 'N/A', color: '#6366f1', sub: 'Átl. kamat eltérés versenytársaktól',
+      info: 'Átlagos abszolút eltérés a JTR hitelkamatai és az ellenfél átlagkamatai között (százalékpontban). Magasabb = agresszívabb/eltérőbb stratégia. Scan JSON döntésekből számolva.' },
+    { key: 'aktivProj', label: 'AKTÍV PROJEKTEK', value: aktivProjektek !== null ? aktivProjektek + ' db' : 'N/A', color: '#0ea5e9', sub: 'Összes indított',
+      info: 'Összes egyedi projekt amit JTR valaha indított. Max 3/periódus, max 16 összesen. A projektek kereslet-bővítő és kapacitás-növelő hatásúak (pl. #6 Private Bank: +9% betét kereslet, +4.5% hitel kereslet).' },
+    { key: 'keresletKih', label: 'KERESLET KIHASZN.', value: keresletKihaszn !== null ? keresletKihaszn.toFixed(1) + '%' : 'N/A', color: keresletKihaszn !== null && keresletKihaszn > 90 ? '#2d6a4f' : '#d97706', sub: 'Hitelünk / piaci kereslet',
+      info: 'JTR tényleges hitelállomány / teljes piaci kereslet × 100. Megmutatja mennyit fogunk el a rendelkezésre álló piacból. Ha alacsony: van hely növekedni (kamat↓, promó↑). Scan kereslet adatokból.' },
+  ];
+
+  html += '<div class="kpi-tier">';
+  html += '<div class="kpi-tier-header" onclick="toggleKpiTier(3)"><span class="chevron closed" id="kpiChevron3">▼</span><h4>Stratégiai</h4></div>';
+  html += '<div class="kpi-tier-grid" id="kpiTier3Body" style="display:none;">';
+  strategic.forEach(s => {
+    html += `<div class="kpi-card-v2 ${s.penalty ? 'penalty-active' : ''}" style="border-left-color:${s.color};">`;
+    html += `<div class="kpi-label">${s.label}${s.info ? kpiInfoBtn(s.label, s.info) : ''}</div>`;
+    html += `<div class="kpi-main"><span class="kpi-value">${s.value}</span></div>`;
+    if (s.sub) html += `<div class="kpi-sub">${s.sub}</div>`;
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  document.getElementById('kpiTierSystem').innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  // Store trend data globally for click handler
+  // Store trend data
   window._kpiTrendData = trendData;
   window._kpiPeriodLabels = periods.map(p => 'P' + p);
+}
+
+function toggleKpiTier(n) {
+  const body = document.getElementById('kpiTier' + n + 'Body');
+  const chevron = document.getElementById('kpiChevron' + n);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'grid';
+  if (chevron) chevron.classList.toggle('closed', isOpen);
 }
 
 // KPI trend chart click handler
 function showKpiTrend(key, label, color) {
   const area = document.getElementById('kpiTrendArea');
+  if (!area) return;
+  const data = window._kpiTrendData?.[key];
+  if (!data || data.every(v => v === null)) return;
   area.style.display = 'block';
   document.getElementById('kpiTrendTitle').textContent = label + ' — JTR trend';
-
-  const data = window._kpiTrendData[key];
   const labels = window._kpiPeriodLabels;
 
   if (charts['kpiTrend']) charts['kpiTrend'].destroy();
