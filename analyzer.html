@@ -2922,23 +2922,52 @@ function renderViselkedes() {
   });
   html += '</div>';
 
+  // ===== Column visibility state =====
+  if (!window._viselkColVis) window._viselkColVis = { valt: true, prev: true, min: true, max: true };
+  const colVis = window._viselkColVis;
+  const colDefs = [
+    { key: 'valt', label: 'Átl.változás', default: true },
+    { key: 'prev', label: 'Előző kör', default: true },
+    { key: 'min', label: 'Min', default: true },
+    { key: 'max', label: 'Max', default: true },
+  ];
+  function getVisibleColCount() { return colDefs.filter(c => colVis[c.key]).length; }
+
   // ===== 1. Döntési változások tábla =====
   html += '<h4 style="color:#c0392b; margin-bottom:8px;">Döntési változások periódusról periódusra</h4>';
+
+  // Column toggles
+  html += '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">';
+  html += '<span style="font-size:11px;color:var(--text-muted);align-self:center;">Oszlopok:</span>';
+  colDefs.forEach(c => {
+    const active = colVis[c.key];
+    html += `<button onclick="window._viselkColVis.${c.key}=!window._viselkColVis.${c.key};renderViselkedes();" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid ${active ? 'var(--accent-green)' : 'var(--border)'};background:${active ? 'rgba(45,106,79,0.1)' : 'var(--bg-secondary)'};color:${active ? 'var(--accent-green)' : 'var(--text-muted)'};cursor:pointer;font-weight:${active?'600':'400'};">${c.label}</button>`;
+  });
+  html += '</div>';
+
+  // Get last period data for "Előző kör" column
+  const lastPeriodKey = periods[periods.length - 1];
+  const lastPeriodData = periodData[lastPeriodKey] || {};
+
   html += '<div style="overflow-x:auto;"><table>';
+  const visColCount = getVisibleColCount();
 
   // Header row 1: team names
   html += '<tr><th rowspan="2" style="min-width:200px;">Mező</th>';
   TEAMS.forEach((t, i) => {
     const s = i === JTR ? 'style="background:#d4763a; color:#000; text-align:center;"' : 'style="text-align:center;"';
-    html += `<th colspan="3" ${s}>${t}</th>`;
+    html += `<th colspan="${visColCount}" ${s}>${t}</th>`;
   });
   html += '</tr>';
 
-  // Header row 2: Átl.vált / Min / Max
+  // Header row 2: visible columns per team
   html += '<tr>';
   TEAMS.forEach((t, i) => {
     const s = i === JTR ? 'style="background:rgba(245,166,35,0.15);"' : '';
-    html += `<th ${s}>Átl.vált</th><th ${s}>Min</th><th ${s}>Max</th>`;
+    if (colVis.valt) html += `<th ${s}>Átl.vált</th>`;
+    if (colVis.prev) html += `<th ${s}>P${lastPeriodKey}</th>`;
+    if (colVis.min) html += `<th ${s}>Min</th>`;
+    if (colVis.max) html += `<th ${s}>Max</th>`;
   });
   html += '</tr>';
 
@@ -2962,9 +2991,9 @@ function renderViselkedes() {
 
         if (noChangeTeams.has(ti)) {
           if (fi === 0 && hi === 0) {
-            html += `<td colspan="3" style="${baseStyle} color:var(--text-secondary); text-align:center;">Nem változtatott</td>`;
+            html += `<td colspan="${visColCount}" style="${baseStyle} color:var(--text-secondary); text-align:center;">Nem változtatott</td>`;
           } else {
-            html += `<td colspan="3" style="${baseStyle} color:var(--text-secondary); text-align:center;">-</td>`;
+            html += `<td colspan="${visColCount}" style="${baseStyle} color:var(--text-secondary); text-align:center;">-</td>`;
           }
           return;
         }
@@ -2972,29 +3001,28 @@ function renderViselkedes() {
         const avgChange = st.changes.length > 0 ? avg(st.changes) : null;
         const mn = minVal(st.allValues);
         const mx = maxVal(st.allValues);
+        // Previous period value
+        const lastD = lastPeriodData[ti];
+        const prevVal = lastD?.hitel?.[hi]?.[fi];
 
-        // Color logic: kamat/díj negatív = zöld (agresszív), pozitív = piros
-        // Promónál: pozitív = zöld (több marketing), negatív = piros
         let changeColor = '#e0e0e0';
         if (avgChange !== null && Math.abs(avgChange) > 0.001) {
-          if (isPromo) {
-            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
-          } else {
-            changeColor = avgChange < 0 ? '#4caf50' : '#c0392b';
-          }
+          if (isPromo) { changeColor = avgChange > 0 ? '#4caf50' : '#c0392b'; }
+          else { changeColor = avgChange < 0 ? '#4caf50' : '#c0392b'; }
         }
 
         const jtrBold = isJtr ? 'font-weight:700;' : '';
-        html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
-        html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mn, isPercent)}</td>`;
-        html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mx, isPercent)}</td>`;
+        if (colVis.valt) html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
+        if (colVis.prev) html += `<td style="${baseStyle} ${jtrBold}">${prevVal !== null && prevVal !== undefined ? fmtMinMax(prevVal, isPercent) : '-'}</td>`;
+        if (colVis.min) html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mn, isPercent)}</td>`;
+        if (colVis.max) html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mx, isPercent)}</td>`;
       });
       html += '</tr>';
     }
   }
 
   // Separator row
-  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
+  html += `<tr><td colspan="${1 + TEAMS.length * visColCount}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
 
   // Render betét rows
   for (let bi = 0; bi < betetSearchNames.length; bi++) {
@@ -3009,35 +3037,34 @@ function renderViselkedes() {
         const baseStyle = isJtr ? 'background:rgba(245,166,35,0.08);' : '';
 
         if (noChangeTeams.has(ti)) {
-          html += `<td colspan="3" style="${baseStyle} color:var(--text-secondary); text-align:center;">-</td>`;
+          html += `<td colspan="${visColCount}" style="${baseStyle} color:var(--text-secondary); text-align:center;">-</td>`;
           return;
         }
 
         const avgChange = st.changes.length > 0 ? avg(st.changes) : null;
         const mn = minVal(st.allValues);
         const mx = maxVal(st.allValues);
+        const lastD = lastPeriodData[ti];
+        const prevVal = lastD?.betet?.[bi]?.[fi];
 
         let changeColor = '#e0e0e0';
         if (avgChange !== null && Math.abs(avgChange) > 0.001) {
-          if (isPromo) {
-            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
-          } else {
-            // Betét kamat: emelés (pozitív) = agresszív ügyfélszerzés = zöld, csökkentés = piros
-            changeColor = avgChange > 0 ? '#4caf50' : '#c0392b';
-          }
+          if (isPromo) { changeColor = avgChange > 0 ? '#4caf50' : '#c0392b'; }
+          else { changeColor = avgChange > 0 ? '#4caf50' : '#c0392b'; }
         }
 
         const jtrBold = isJtr ? 'font-weight:700;' : '';
-        html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
-        html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mn, isPercent)}</td>`;
-        html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mx, isPercent)}</td>`;
+        if (colVis.valt) html += `<td style="${baseStyle} color:${changeColor}; ${jtrBold}">${fmtChange(avgChange, isPercent)}</td>`;
+        if (colVis.prev) html += `<td style="${baseStyle} ${jtrBold}">${prevVal !== null && prevVal !== undefined ? fmtMinMax(prevVal, isPercent) : '-'}</td>`;
+        if (colVis.min) html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mn, isPercent)}</td>`;
+        if (colVis.max) html += `<td style="${baseStyle} color:var(--text-muted);">${fmtMinMax(mx, isPercent)}</td>`;
       });
       html += '</tr>';
     }
   }
 
   // Separator
-  html += `<tr><td colspan="${1 + TEAMS.length * 3}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
+  html += `<tr><td colspan="${1 + TEAMS.length * visColCount}" style="border-top:2px solid #c0392b; padding:2px;"></td></tr>`;
 
   // Összesített mutatók
   const aggRows = [
@@ -3057,7 +3084,7 @@ function renderViselkedes() {
       if (avgCh !== null && Math.abs(avgCh) > 0.1) {
         color = avgCh > 0 ? '#4caf50' : '#c0392b';
       }
-      html += `<td colspan="3" style="${baseStyle} color:${color}; ${jtrBold} text-align:center;">${avgCh !== null ? (avgCh > 0 ? '+' : '') + avgCh.toFixed(1) + '%' : '-'}</td>`;
+      html += `<td colspan="${visColCount}" style="${baseStyle} color:${color}; ${jtrBold} text-align:center;">${avgCh !== null ? (avgCh > 0 ? '+' : '') + avgCh.toFixed(1) + '%' : '-'}</td>`;
     });
     html += '</tr>';
   }
@@ -4449,25 +4476,88 @@ function renderForecast() {
 }
 
 // ===== DÖNTÉSEK TAB =====
+// Global state for decisions tab pagination
+let decisionsPeriodIdx = -1; // -1 = auto (latest)
+
+function getDecisionPeriodKeys() {
+  const decisions = megaScanData?.decisions || megaScanData?.dontesek || {};
+  const teamNames = Object.keys(decisions);
+  if (teamNames.length === 0) return [];
+  const firstTeam = decisions[teamNames[0]];
+  if (!firstTeam) return [];
+  return Object.keys(firstTeam).filter(k => !k.includes('terv')).sort((a,b) => {
+    const na = parseInt(a.replace(/\D/g,'')) || 0;
+    const nb = parseInt(b.replace(/\D/g,'')) || 0;
+    return na - nb;
+  });
+}
+
+function getTeamDecForPeriod(t, pKey) {
+  const decisions = megaScanData?.decisions || megaScanData?.dontesek || {};
+  return decisions[t]?.[pKey] || null;
+}
+
+function decPagePrev() { if (decisionsPeriodIdx > 0) { decisionsPeriodIdx--; renderDecisionsTab(); } }
+function decPageNext() { const keys = getDecisionPeriodKeys(); if (decisionsPeriodIdx < keys.length - 1) { decisionsPeriodIdx++; renderDecisionsTab(); } }
+
 function renderDecisionsTab() {
   const el = document.getElementById('decisionsContent');
   if (!el) return;
   if (!megaScanData) { el.innerHTML = '<p style="color:var(--text-muted);">Mega Scan / Giga Scan JSON betöltése szükséges.</p>'; return; }
 
-  // CSAK ami NEM látszik az Excelben: marketing bontás, HR/IT, projektek, behajthatatlan ráták
-
   const decisions = megaScanData.decisions || megaScanData.dontesek || {};
   const teamNames = Object.keys(decisions);
   if (teamNames.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);">Nincs ellenfél döntési adat a betöltött JSON-ban.</p>'; return; }
-  const latestPKey = getLatestPeriodKey(decisions[teamNames[0]]);
+
+  const periodKeys = getDecisionPeriodKeys();
+  if (periodKeys.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);">Nincs periódus adat.</p>'; return; }
+
+  // Auto-init to latest
+  if (decisionsPeriodIdx < 0 || decisionsPeriodIdx >= periodKeys.length) decisionsPeriodIdx = periodKeys.length - 1;
+
+  const curKey = periodKeys[decisionsPeriodIdx];
+  const prevKey = decisionsPeriodIdx > 0 ? periodKeys[decisionsPeriodIdx - 1] : null;
+
   const mono = "font-family:'JetBrains Mono',monospace;";
   const jC = 'background:rgba(212,118,58,0.06);font-weight:700;color:#d4763a;';
   const jH = 'background:#d4763a;color:#fff;';
   const sH = 'color:var(--accent-green);font-size:15px;font-weight:700;margin:24px 0 10px;';
   const pjMap = {1:'Lakoss.prémium',2:'Fiókhálózat',3:'Munkabéres',4:'NextGen',5:'IT fejl.',6:'Private bank',7:'Training',8:'Szegmentáció',9:'Előrejelzés',10:'TBSZ',11:'MI+auto',12:'Hitelbírálat',13:'Ügynökség',14:'Váll.prémium',15:'MobilPOS',16:'Arculat'};
   function isJ(t){return t==='JTR';}
+
+  // Delta formatter: shows value + colored delta badge
+  function fmtDelta(cur, prev, suffix, invert) {
+    if (cur === '—' || cur == null) return '—';
+    let display = typeof cur === 'number' ? cur.toLocaleString() : cur;
+    if (suffix) display += suffix;
+    if (prev == null || prev === '—' || !prevKey) return display;
+    const diff = (+cur) - (+prev);
+    if (isNaN(diff) || diff === 0) return display;
+    const isGood = invert ? diff < 0 : diff > 0;
+    const color = isGood ? '#22c55e' : '#ef4444';
+    const arrow = diff > 0 ? '\u25B2' : '\u25BC';
+    return `${display} <span style="font-size:10px;color:${color};font-weight:700;margin-left:3px;">${arrow}${diff > 0 ? '+' : ''}${Math.round(diff).toLocaleString()}</span>`;
+  }
+
   let html = '';
-  if (latestPKey) html += `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Döntési periódus: <strong>${latestPKey}</strong></div>`;
+
+  // === LAPOZÓ ===
+  const prevDisabled = decisionsPeriodIdx <= 0 ? 'opacity:0.3;pointer-events:none;' : 'cursor:pointer;';
+  const nextDisabled = decisionsPeriodIdx >= periodKeys.length - 1 ? 'opacity:0.3;pointer-events:none;' : 'cursor:pointer;';
+  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+  html += `<button onclick="decPagePrev()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);font-weight:600;${prevDisabled}">\u25C0 Előző</button>`;
+  html += `<div style="font-size:16px;font-weight:700;color:var(--text-primary);">`;
+  if (prevKey) {
+    html += `${prevKey} \u2192 <span style="color:#d4763a;">${curKey}</span>`;
+    html += `<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">(változások az előző körhöz képest)</span>`;
+  } else {
+    html += `<span style="color:#d4763a;">${curKey}</span>`;
+    html += `<span style="font-size:12px;color:var(--text-muted);margin-left:8px;">(első periódus — nincs előző)</span>`;
+  }
+  html += '</div>';
+  html += `<button onclick="decPageNext()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary);font-weight:600;${nextDisabled}">Következő \u25B6</button>`;
+  html += `<span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${decisionsPeriodIdx + 1} / ${periodKeys.length}</span>`;
+  html += '</div>';
 
   // === 1. MARKETING BONTÁS ===
   html += `<div style="${sH}">Marketing költés részletesen</div>`;
@@ -4478,18 +4568,21 @@ function renderDecisionsTab() {
   channels.forEach(ch => {
     html += `<tr><td style="text-transform:uppercase;font-weight:600;">${ch}</td>`;
     teamNames.forEach(t => {
-      const dec = getTeamDec(t);
-      let val = '—';
-      if (dec?.M_reszletes && dec.M_reszletes[ch] !== undefined) { val = Math.round(dec.M_reszletes[ch]).toLocaleString(); }
-      html += `<td style="${mono}${isJ(t)?jC:''}">${val}</td>`;
+      const dec = getTeamDecForPeriod(t, curKey);
+      const prev = prevKey ? getTeamDecForPeriod(t, prevKey) : null;
+      let val = dec?.M_reszletes?.[ch] !== undefined ? Math.round(dec.M_reszletes[ch]) : '—';
+      let pVal = prev?.M_reszletes?.[ch] !== undefined ? Math.round(prev.M_reszletes[ch]) : null;
+      html += `<td style="${mono}${isJ(t)?jC:''}">${fmtDelta(val, pVal, '')}</td>`;
     });
     html += '</tr>';
   });
   html += `<tr style="border-top:2px solid var(--border);font-weight:700;"><td>ÖSSZESEN</td>`;
   teamNames.forEach(t => {
-    const dec = getTeamDec(t);
+    const dec = getTeamDecForPeriod(t, curKey);
+    const prev = prevKey ? getTeamDecForPeriod(t, prevKey) : null;
     const total = dec?.M || (dec?.M_reszletes ? Object.values(dec.M_reszletes).reduce((s,v)=>s+(+v||0),0) : 0);
-    html += `<td style="${mono}${isJ(t)?jC:''}">${Math.round(total).toLocaleString()}</td>`;
+    const pTotal = prev ? (prev?.M || (prev?.M_reszletes ? Object.values(prev.M_reszletes).reduce((s,v)=>s+(+v||0),0) : 0)) : null;
+    html += `<td style="${mono}${isJ(t)?jC:''}">${fmtDelta(Math.round(total), pTotal ? Math.round(pTotal) : null, '')}</td>`;
   });
   html += '</tr></table></div>';
 
@@ -4507,22 +4600,24 @@ function renderDecisionsTab() {
   hrFields.forEach(f => {
     html += `<tr><td>${f.label}</td>`;
     teamNames.forEach(t => {
-      const dec = getTeamDec(t);
+      const dec = getTeamDecForPeriod(t, curKey);
+      const prev = prevKey ? getTeamDecForPeriod(t, prevKey) : null;
       const val = f.get(dec);
-      const isDefault = (f.label.includes('Bér') && +val === 930) || (f.label.includes('Felvétel') && +val === 37) || (f.label.includes('Képzés') && +val === 45) || (f.label.includes('IT') && +val === 10000);
-      const display = isDefault ? `<span style="color:var(--text-muted);">${val} (default)</span>` : `<strong>${val}</strong>`;
-      html += `<td style="${mono}${isJ(t)?jC:''}">${display}</td>`;
+      const pVal = prev ? f.get(prev) : null;
+      html += `<td style="${mono}${isJ(t)?jC:''}">${fmtDelta(val, pVal, '')}</td>`;
     });
     html += '</tr>';
   });
   html += '</table></div>';
 
-  // === 3. PROJEKTEK ===
-  html += `<div style="${sH}">Indított projektek</div>`;
+  // === 3. PROJEKTEK (változás: ÚJ projektek kiemelve) ===
+  html += `<div style="${sH}">Projektek</div>`;
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
   teamNames.forEach(t => {
-    const dec = getTeamDec(t);
+    const dec = getTeamDecForPeriod(t, curKey);
+    const prev = prevKey ? getTeamDecForPeriod(t, prevKey) : null;
     const projs = dec?.P || [];
+    const prevProjs = prev?.P || [];
     html += `<div style="background:${isJ(t)?'rgba(212,118,58,0.06)':'var(--bg-secondary)'};border-radius:var(--radius-sm);padding:14px;border-left:4px solid ${isJ(t)?'#d4763a':'var(--border)'};">`;
     html += `<div style="font-weight:700;color:${isJ(t)?'#d4763a':'var(--text-primary)'};margin-bottom:8px;">${t}</div>`;
     if (projs.length === 0) {
@@ -4530,228 +4625,48 @@ function renderDecisionsTab() {
     } else {
       html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
       projs.forEach(p => {
-        html += `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:var(--accent-green);color:#fff;font-size:11px;font-weight:600;">#${p} ${pjMap[p]||'?'}</span>`;
+        const isNew = !prevProjs.includes(p);
+        const bg = isNew ? '#22c55e' : 'var(--bg-tertiary, #555)';
+        const label = isNew ? '\u2605 ' : '';
+        html += `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:${bg};color:#fff;font-size:11px;font-weight:600;">${label}#${p} ${pjMap[p]||'?'}</span>`;
       });
       html += '</div>';
+      if (prevKey) {
+        const newCount = projs.filter(p => !prevProjs.includes(p)).length;
+        if (newCount > 0) html += `<div style="font-size:10px;color:#22c55e;margin-top:4px;font-weight:600;">+${newCount} új projekt ebben a körben</div>`;
+      }
     }
     html += '</div>';
   });
   html += '</div>';
 
-  // Behajthatatlan ráták — eltávolítva (Excel-ben látható)
-
-  // DONE — nem kell ide: hitel/betét kamatok (Excel-ben van), kereslet (másik fülön van)
-  // [régi kód törölve — az alábbi régi section kódot kihagyjuk]
-  if(false) { // DISABLED OLD CODE
-
-  function isJtr(t) { return t === 'JTR'; }
-  function cellStyle(t) { return mono + (isJtr(t) ? jtrCell : ''); }
-  function headStyle(t) { return isJtr(t) ? jtrHead : ''; }
-  function fmt(v) { return v != null ? v : '—'; }
-  function fmtK(v) { return v != null ? (v/1000).toFixed(0) + 'k' : '—'; }
-  function fmtM(v) { return v != null ? (v/1e6).toFixed(1) + 'M' : '—'; }
-  function teamHeaders() { return teamNames.map(t => '<th style="' + headStyle(t) + '">' + t + '</th>').join(''); }
-
-  if (teamNames.length === 0) {
-    el.innerHTML = '<p style="color:var(--text-muted);">Nincs csapat dontes adat a Mega Scan-ben.</p>';
-    return;
-  }
-
-  // ──── Section A: Hitelek osszehasonlitas ────
-  html += '<div style="' + sectionHead + '">A) Dontesek osszehasonlitas (hitelek)</div>';
-  html += '<div style="overflow-x:auto;"><table><tr><th>Termek</th>' + teamHeaders() + '</tr>';
-  const loanKeys = ['Folyoszamlahitel','Szemelyi','Jelzalog','Allami','Vallalati'];
-  loanKeys.forEach(lk => {
-    // kamat row
-    html += '<tr><td><strong>' + lk + '</strong> kamat%</td>';
-    teamNames.forEach(t => {
-      const d = getTeamDec(t)?.loans?.[lk];
-      html += '<td style="' + cellStyle(t) + '">' + (d ? d[0] + '%' : '—') + '</td>';
-    });
-    html += '</tr>';
-    // promo row
-    html += '<tr><td>' + lk + ' promo</td>';
-    teamNames.forEach(t => {
-      const d = getTeamDec(t)?.loans?.[lk];
-      html += '<td style="' + cellStyle(t) + '">' + (d ? fmtK(d[1]) : '—') + '</td>';
-    });
-    html += '</tr>';
-  });
-  html += '</table></div>';
-
-  // ──── Section B: Betetek osszehasonlitas ────
-  html += '<div style="' + sectionHead + '">B) Dontesek osszehasonlitas (betetek)</div>';
-  html += '<div style="overflow-x:auto;"><table><tr><th>Termek</th>' + teamHeaders() + '</tr>';
-  const depKeys = ['Folyoszamla','Rovid','Hosszu','Lakastak'];
-  depKeys.forEach(dk => {
-    html += '<tr><td><strong>' + dk + ' betet</strong> kamat%</td>';
-    teamNames.forEach(t => {
-      const d = getTeamDec(t)?.deposits?.[dk];
-      html += '<td style="' + cellStyle(t) + '">' + (d ? d[0] + '%' : '—') + '</td>';
-    });
-    html += '</tr>';
-    html += '<tr><td>' + dk + ' betet promo</td>';
-    teamNames.forEach(t => {
-      const d = getTeamDec(t)?.deposits?.[dk];
-      html += '<td style="' + cellStyle(t) + '">' + (d ? fmtK(d[1]) : '—') + '</td>';
-    });
-    html += '</tr>';
-  });
-  html += '</table></div>';
-
-  // ──── Section C: Marketing reszletes bontas ────
-  html += '<div style="' + sectionHead + '">C) Marketing reszletes bontas</div>';
-  html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>TV</th><th>Online</th><th>Offline</th><th>PR</th><th>CSR</th><th>Osszes</th></tr>';
-  teamNames.forEach(t => {
-    const m = getTeamDec(t)?.marketing;
-    const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
-    const cStyle = mono + (isJtr(t) ? 'font-weight:700;color:#d4763a;' : '');
-    if (m && typeof m === 'object' && !Array.isArray(m)) {
-      // detailed breakdown available
-      const tv = m.TV || m.tv || 0;
-      const online = m.Online || m.online || 0;
-      const offline = m.Offline || m.offline || 0;
-      const pr = m.PR || m.pr || 0;
-      const csr = m.CSR || m.csr || 0;
-      const total = tv + online + offline + pr + csr;
-      html += '<tr style="' + rowJtr + '"><td><strong>' + t + '</strong></td>';
-      html += '<td style="' + cStyle + '">' + fmtK(tv) + '</td>';
-      html += '<td style="' + cStyle + '">' + fmtK(online) + '</td>';
-      html += '<td style="' + cStyle + '">' + fmtK(offline) + '</td>';
-      html += '<td style="' + cStyle + '">' + fmtK(pr) + '</td>';
-      html += '<td style="' + cStyle + '">' + fmtK(csr) + '</td>';
-      html += '<td style="' + cStyle + 'font-weight:700;">' + fmtK(total) + '</td>';
-      html += '</tr>';
-    } else if (m && typeof m === 'object' && Array.isArray(m)) {
-      // array format [TV, Online, Offline, PR, CSR]
-      const total = m.reduce((s,v)=>s+v,0);
-      html += '<tr style="' + rowJtr + '"><td><strong>' + t + '</strong></td>';
-      for (let i = 0; i < 5; i++) html += '<td style="' + cStyle + '">' + fmtK(m[i]||0) + '</td>';
-      html += '<td style="' + cStyle + 'font-weight:700;">' + fmtK(total) + '</td>';
-      html += '</tr>';
-    } else {
-      // only total available
-      const total = typeof m === 'number' ? m : 0;
-      html += '<tr style="' + rowJtr + '"><td><strong>' + t + '</strong></td>';
-      html += '<td colspan="5" style="' + cStyle + 'text-align:center;">csak osszeg ismert</td>';
-      html += '<td style="' + cStyle + 'font-weight:700;">' + fmtK(total) + '</td>';
-      html += '</tr>';
-    }
-  });
-  html += '</table></div>';
-
-  // ──── Section D: HR & IT dontesek ────
-  html += '<div style="' + sectionHead + '">D) HR & IT dontesek</div>';
-  html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>Felvetel</th><th>Ber</th><th>Kepzes</th><th>IT beruhazas</th></tr>';
-  teamNames.forEach(t => {
-    const p1 = getTeamDec(t) || {};
-    const h = p1.H || p1.h || p1.hr || [];
-    const it = p1.IT || p1.it || 0;
-    const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
-    const cStyle = mono + (isJtr(t) ? 'font-weight:700;color:#d4763a;' : '');
-    html += '<tr style="' + rowJtr + '"><td><strong>' + t + '</strong></td>';
-    html += '<td style="' + cStyle + '">' + fmt(h[0]) + '</td>';
-    html += '<td style="' + cStyle + '">' + fmt(h[1]) + '</td>';
-    html += '<td style="' + cStyle + '">' + fmt(h[2]) + '</td>';
-    html += '<td style="' + cStyle + '">' + fmtK(it) + '</td>';
-    html += '</tr>';
-  });
-  html += '</table></div>';
-
-  // ──── Section E: Projektek ────
-  const projectNames = {1:'Lakoss.premium', 2:'Fiokhalozat', 3:'Munkaberes', 4:'NextGen', 5:'IT fejl.', 6:'Private bank', 7:'Training', 8:'Szegmentacio', 9:'Elorejelzes', 10:'TBSZ', 11:'MI+auto', 12:'Hitelbiralat', 13:'Ugynokseg', 14:'Vall.premium', 15:'MobilPOS', 16:'Arculat'};
-  html += '<div style="' + sectionHead + '">E) Projektek</div>';
-  html += '<div style="overflow-x:auto;"><table><tr><th>Csapat</th><th>Elinditott projektek</th></tr>';
-  teamNames.forEach(t => {
-    const p = getTeamDec(t)?.P || getTeamDec(t)?.p || getTeamDec(t)?.projects || [];
-    const rowJtr = isJtr(t) ? 'background:rgba(212,118,58,0.06);' : '';
-    const cStyle = isJtr(t) ? 'font-weight:700;color:#d4763a;' : '';
-    const projList = p.map(n => '<span style="display:inline-block;padding:2px 8px;margin:2px;border-radius:6px;background:var(--bg-secondary);font-size:12px;">' + (projectNames[n] || ('#' + n)) + '</span>').join('');
-    html += '<tr style="' + rowJtr + '"><td style="' + cStyle + '"><strong>' + t + '</strong></td>';
-    html += '<td>' + (projList || '<span style="color:var(--text-muted);">nincs</span>') + '</td></tr>';
-  });
-  html += '</table></div>';
-
-  // === BEFEKTETÉSI DÖNTÉSEK ===
+  // === 4. BEFEKTETÉSI DÖNTÉSEK ===
   const hasInvestments = teamNames.some(t => {
-    const dec = getTeamDec(t);
+    const dec = getTeamDecForPeriod(t, curKey);
     return dec?.inv || dec?.investments;
   });
   if (hasInvestments) {
-    html += '<div style="' + sH + '">Befektetési döntések</div>';
+    html += `<div style="${sH}">Befektetési döntések</div>`;
     html += '<div style="overflow-x:auto;"><table><tr><th>Típus</th>';
-    teamNames.forEach(t => { html += '<th style="' + (isJ(t)?jH:'') + '">' + t + '</th>'; });
+    teamNames.forEach(t => { html += `<th style="${isJ(t)?jH:''}">${t}</th>`; });
     html += '</tr>';
     const invTypes = ['shortStock','longStock','interiorBond','foreignBond','interiorShare','foreignShare'];
     const invNames = {'shortStock':'Rövid állampapír','longStock':'Hosszú állampapír','interiorBond':'Hazai kötvény','foreignBond':'Külföldi kötvény','interiorShare':'Hazai részvény','foreignShare':'Külföldi részvény'};
     invTypes.forEach(ik => {
       html += '<tr><td>' + (invNames[ik]||ik) + '</td>';
       teamNames.forEach(t => {
-        const dec = getTeamDec(t);
+        const dec = getTeamDecForPeriod(t, curKey);
+        const prev = prevKey ? getTeamDecForPeriod(t, prevKey) : null;
         const inv = dec?.inv || dec?.investments || {};
+        const pInv = prev ? (prev?.inv || prev?.investments || {}) : {};
         const val = inv[ik]?.invest !== undefined ? +inv[ik].invest : (inv[ik] !== undefined ? +inv[ik] : 0);
-        const color = val > 0 ? 'var(--accent-green)' : val < 0 ? 'var(--accent-red)' : 'var(--text-muted)';
-        html += '<td style="' + mono + (isJ(t)?jC:'') + 'color:' + color + ';">' + (val > 0 ? '+' : '') + val.toLocaleString() + '</td>';
+        const pVal = prev ? (pInv[ik]?.invest !== undefined ? +pInv[ik].invest : (pInv[ik] !== undefined ? +pInv[ik] : 0)) : null;
+        html += `<td style="${mono}${isJ(t)?jC:''}">${fmtDelta(val, pVal, '')}</td>`;
       });
       html += '</tr>';
     });
     html += '</table></div>';
   }
-
-  // ──── Section F: Kereslet & piaci reszesedes ────
-  if (market.loans || market.deposits) {
-    html += '<div style="' + sectionHead + '">F) Kereslet & piaci reszesedes</div>';
-    html += '<div style="overflow-x:auto;"><table><tr><th>Termek</th>';
-    const displayTeams = megaScanData.meta?.teams || teamNames;
-    displayTeams.forEach((t,i) => {
-      html += '<th style="' + (i === 0 || t === 'JTR' ? jtrHead : '') + '">' + t + '</th>';
-    });
-    html += '<th>Osszesen</th><th>JTR %</th></tr>';
-
-    const allProducts = [...Object.entries(market.loans||{}), ...Object.entries(market.deposits||{})];
-    allProducts.forEach(([name, d]) => {
-      if (!d.demand) return;
-      const total = d.demand.reduce((s,v)=>s+v,0);
-      const jtrPct = total > 0 ? (d.demand[0]/total*100) : 25;
-      html += '<tr><td>' + name + '</td>';
-      d.demand.forEach((v,i) => {
-        const jtr = i === 0;
-        html += '<td style="' + mono + (jtr ? jtrCell : '') + '">' + fmtM(v) + '</td>';
-      });
-      html += '<td style="' + mono + 'font-weight:700;">' + fmtM(total) + '</td>';
-      const pctColor = jtrPct > 25 ? 'var(--accent-green)' : jtrPct < 23 ? 'var(--accent-red)' : 'var(--text-secondary)';
-      html += '<td style="font-weight:700;color:' + pctColor + ';">' + jtrPct.toFixed(1) + '%</td>';
-      html += '</tr>';
-    });
-    html += '</table></div>';
-  }
-
-  // ──── Section G: Behajthatatlan ratak csapatonkent ────
-  if (market.loans) {
-    const hasUncollectable = Object.values(market.loans).some(d => d.uncollectable || d.uncollectableRate);
-    if (hasUncollectable) {
-      html += '<div style="' + sectionHead + '">G) Behajthatatlan ratak csapatonkent</div>';
-      html += '<div style="overflow-x:auto;"><table><tr><th>Hitel tipus</th>';
-      const displayTeams = megaScanData.meta?.teams || teamNames;
-      displayTeams.forEach((t,i) => {
-        html += '<th style="' + (i === 0 || t === 'JTR' ? jtrHead : '') + '">' + t + '</th>';
-      });
-      html += '</tr>';
-      Object.entries(market.loans).forEach(([name, d]) => {
-        const rates = d.uncollectable || d.uncollectableRate;
-        if (!rates) return;
-        html += '<tr><td>' + name + '</td>';
-        (Array.isArray(rates) ? rates : [rates]).forEach((r,i) => {
-          const jtr = i === 0;
-          html += '<td style="' + mono + (jtr ? jtrCell : '') + '">' + (typeof r === 'number' ? r.toFixed(2) + '%' : fmt(r)) + '</td>';
-        });
-        html += '</tr>';
-      });
-      html += '</table></div>';
-    }
-  }
-
-  } // end DISABLED OLD CODE
 
   el.innerHTML = html;
   if (typeof lucide !== 'undefined') lucide.createIcons();
