@@ -3133,8 +3133,7 @@ function renderViselkedes() {
     'Piaci részesedés',     // hitelállomány részarány (↑ = nagyobb piaci jelenlét)
   ];
 
-  // Get CURRENT period data
-  const lastPeriodKey = periods[periods.length - 1];
+  // Get CURRENT period data (reuse lastPeriodKey from above)
   const firstPeriodKey = periods[0];
   const lastRows = allData[lastPeriodKey] || [];
   const firstRows = allData[firstPeriodKey] || [];
